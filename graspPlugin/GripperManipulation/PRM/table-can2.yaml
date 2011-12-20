@@ -1,0 +1,10 @@
+modelFile: ../../Samples/Object/table-canhrp.wrl
+
+EnvCluster: 
+-
+    id: [ 1 ]
+    area: [ 0.54 ]
+    outer_normal: [ -1.29983e-16, -2.05031e-16, 1 ]
+    tangent_vector [ 2.86527e-18, -1, -6.67434e-17 ]
+    bounding_box_edge [ 0.9, 0.6, 2.62518e-16  ]
+    bounding_box_center [ 0, 0, 0.81 ]
