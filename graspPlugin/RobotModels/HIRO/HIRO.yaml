@@ -1,4 +1,4 @@
-modelFile: hironx-distribution-vrml/main.wrl
+modelFile: Plugin/hironx-distribution-vrml/main.wrl
 
 standardPose: [ 
 0, 0, 0,
