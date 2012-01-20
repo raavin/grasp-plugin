@@ -40,8 +40,7 @@ if(INSTALL_SDK)
 endif()
 
 if(NOT EXISTS ../hironx-distribution-vrml/main.wrl) 
-  command(cd ..)
-  command(wget http://openhrp-aist-grx.googlecode.com/files/hironx-distribution-vrml.zip)
+#  COMMAND cd ..; wget http://openhrp-aist-grx.googlecode.com/files/hironx-distribution-vrml.zip; cd Plugin
 endif()
 
 add_subdirectory(OpenRAVE)
