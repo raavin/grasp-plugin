@@ -39,7 +39,7 @@ if(INSTALL_SDK)
   install(FILES ${headers} DESTINATION ${CNOID_HEADER_SUBDIR}/extplugin/graspPlugin/Grasp)
 endif()
 
-if(NOT EXISTS ./hironx-distribution-vrml/main.wrl) 
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/extplugin/graspPlugin/RobotModels/HIRO/Plugin/hironx-distribution-vrml/main.wrl) 
   ADD_CUSTOM_COMMAND(
     TARGET ${libname}
     POST_BUILD
