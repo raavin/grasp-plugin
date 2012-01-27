@@ -1,3 +1,4 @@
+// -*- mode: c++; indent-tabs-mode: t; tab-width: 4; c-basic-offset: 4; -*-
 /**
    c) Tokuo Tsuji (Kyushu univ./AIST) and Kensuke Harada (AIST)
 */
@@ -340,6 +341,24 @@ bool GraspBar::restoreState(const Archive& archive)
 			string tagId = bodyItem->name();
 			gc->objTag2Item.insert( pair <string,BodyItemPtr>(tagId, bodyItem) );
 		}
+	}
+	
+	const YamlSequence& qs3 = *archive.findSequence("GraspPlanning");
+	if(qs3.isValid()){
+		bool init = PlanBase::instance()->initial();
+		if(!init){
+			os << "Failed: Grasp Planning Initial" << endl;
+			return true;
+		}
+		
+		try{
+			PlanInterface::instance()->doGraspPlanning();
+		}
+		catch(int number){
+			PlanBase::instance()->stopFlag=false;
+			os <<  "Grasp Planning is stopped" << endl;
+		}
+		PlanBase::instance()->flush();
 	}
 	
 	return true;
