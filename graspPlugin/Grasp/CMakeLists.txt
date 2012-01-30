@@ -43,7 +43,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 
 if(UNIX)
 
-	target_link_libraries(${libname} CnoidBodyPlugin qhull ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY})
+	target_link_libraries(${libname} CnoidBodyPlugin qhull ${PYTHON_LIBRARIES} boost_regex boost_python)
 
 
   install(TARGETS ${libname}
