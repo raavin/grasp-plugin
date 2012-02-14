@@ -344,11 +344,11 @@ double GraspController::getPalmPosture() {
 
 			Palm.R = GRCface.R * (GRCmax.R * relGRCface.R).transpose();
 
-			if(0.5*d0(1) + GRCmax.p(1)-GRCdes.p(1) < 0.5*GRCmax.edge(1))
+			if(0.5*fabs(d0(1)) + dot(GRCmax.R*ey, GRCmax.p-GRCdes.p) < 0.5*GRCmax.edge(1))
 				Palm.p = OCP.p + Palm.R * dGRC_Pos_ - Palm.R * GRCdes.p;
 			else{
 				Vector3 ap(Palm.R*GRCmax.R*ey);
-				Palm.p = OCP.p + Palm.R * dGRC_Pos_ + 0.5*(GRCmax.edge(1) - d0(1))*ap - Palm.R * GRCmax.p;
+				Palm.p = OCP.p + Palm.R * dGRC_Pos_ + 0.5*(GRCmax.edge(1) - fabs(d0(1)))*ap - Palm.R * GRCmax.p;
 			}
 			
 #ifdef DEBUG_MODE	
