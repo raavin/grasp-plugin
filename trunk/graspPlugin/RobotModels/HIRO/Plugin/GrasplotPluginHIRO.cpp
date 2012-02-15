@@ -30,31 +30,16 @@ bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const Ve
 		int n = arm_path->numJoints();
 		Matrix33 R = Rp*arm_path->joint(n-1)->Rs; //R -> attitude()
 
-		
-		//for ver4.6
-		//Coord trans from Choreonoid to OpenRAVE
+		Vector3 wristOffset(0,0,0); //Force sensor offset
+		if(arm_path->joint(n-1)->name()=="RARM_JOINT5")
+				wristOffset = Vector3(0.05,0,0); //Maybe a bug in IKfast
+
+		//use wrist force sensor
 		/*
-		Vector3 dBasePos, dBaseRpy;
-		if(arm_path->joint(n-1)->name()=="RARM_JOINT5"){
-				dBasePos = (Vector3(0.324904, -0.140932, -0.0119343)-Vector3(0.324897, -0.138604, -0.0206276)); 
-				dBaseRpy = (Vector3(2.87979, -0.000769192, -3.14139)-Vector3(1.56782,   -1.309,   -1.56772)); 
-		}
-		else{
-				dBasePos = (Vector3(0.324904, 0.140932, -0.0119343)-Vector3(0.324897, 0.138604, -0.0206276)); 
-				dBaseRpy = (Vector3(-2.87979, -0.000769192, 3.14139)-Vector3(-1.56782,   -1.309,   1.56772)); 
-		}
-
-		Vector3 wristOffset(-0.059, 0,0); //Force sensor offset
-
-		Vector3 bp = base->attitude().transpose()*(p - R*wristOffset - base->p) + dBasePos;
-		Matrix3 bR = rotFromRpy(rpyFromRot(base->attitude().transpose()*R) + dBaseRpy);
-		*/
-
-		//for ver4.1
-
 		Vector3 wristOffset(-0.059, 0,0); //Force sensor offset
 		if(arm_path->joint(n-1)->name()=="RARM_JOINT5")
-				wristOffset = Vector3(-0.009,0,0); //Maybe a bug in IKfast
+				wristOffset = Vector3(-0.009,0,0);
+		*/
 
 		Vector3 bp = base->attitude().transpose()*(p - R*wristOffset - base->p);
 		Matrix3 bR = base->attitude().transpose()*R;
