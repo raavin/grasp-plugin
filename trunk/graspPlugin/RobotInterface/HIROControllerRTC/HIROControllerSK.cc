@@ -602,7 +602,7 @@ MotionCommands::RETURN_ID* _objref_MotionCommands::closeGripper()
 
 }
 // Proxy call descriptor class. Mangled signature:
-//  _cMotionCommands_mRETURN__ID_i_cMotionCommands_mDoubleSeq
+//  _cMotionCommands_mRETURN__ID_i_cMotionCommands_mDoubleSeq_i_cMotionCommands_mDoubleSeq
 class _0RL_cd_7ac480c4252a17cd_90000000
   : public omniCallDescriptor
 {
@@ -622,12 +622,15 @@ public:
   
   MotionCommands::DoubleSeq_var arg_0_;
   const MotionCommands::DoubleSeq* arg_0;
+  MotionCommands::DoubleSeq_var arg_1_;
+  const MotionCommands::DoubleSeq* arg_1;
   MotionCommands::RETURN_ID_var result;
 };
 
 void _0RL_cd_7ac480c4252a17cd_90000000::marshalArguments(cdrStream& _n)
 {
   (const MotionCommands::DoubleSeq&) *arg_0 >>= _n;
+  (const MotionCommands::DoubleSeq&) *arg_1 >>= _n;
 
 }
 
@@ -636,6 +639,9 @@ void _0RL_cd_7ac480c4252a17cd_90000000::unmarshalArguments(cdrStream& _n)
   arg_0_ = new MotionCommands::DoubleSeq;
   (MotionCommands::DoubleSeq&)arg_0_ <<= _n;
   arg_0 = &arg_0_.in();
+  arg_1_ = new MotionCommands::DoubleSeq;
+  (MotionCommands::DoubleSeq&)arg_1_ <<= _n;
+  arg_1 = &arg_1_.in();
 
 }
 
@@ -658,15 +664,16 @@ _0RL_lcfn_7ac480c4252a17cd_a0000000(omniCallDescriptor* cd, omniServant* svnt)
 {
   _0RL_cd_7ac480c4252a17cd_90000000* tcd = (_0RL_cd_7ac480c4252a17cd_90000000*)cd;
   _impl_MotionCommands* impl = (_impl_MotionCommands*) svnt->_ptrToInterface(MotionCommands::_PD_repoId);
-  tcd->result = impl->moveGripper(*tcd->arg_0);
+  tcd->result = impl->moveGripper(*tcd->arg_0, *tcd->arg_1);
 
 
 }
 
-MotionCommands::RETURN_ID* _objref_MotionCommands::moveGripper(const MotionCommands::DoubleSeq& angle)
+MotionCommands::RETURN_ID* _objref_MotionCommands::moveGripper(const MotionCommands::DoubleSeq& r_angle, const MotionCommands::DoubleSeq& l_angle)
 {
   _0RL_cd_7ac480c4252a17cd_90000000 _call_desc(_0RL_lcfn_7ac480c4252a17cd_a0000000, "moveGripper", 12);
-  _call_desc.arg_0 = &(MotionCommands::DoubleSeq&) angle;
+  _call_desc.arg_0 = &(MotionCommands::DoubleSeq&) r_angle;
+  _call_desc.arg_1 = &(MotionCommands::DoubleSeq&) l_angle;
 
   _invoke(_call_desc);
   return _call_desc.result._retn();
@@ -866,7 +873,7 @@ MotionCommands::RETURN_ID* _objref_MotionCommands::movePTPJointRel(const MotionC
 
 }
 // Proxy call descriptor class. Mangled signature:
-//  _cMotionCommands_mRETURN__ID_i_cMotionCommands_mJointPosSeq_i_cMotionCommands_mDoubleSeq
+//  _cMotionCommands_mRETURN__ID_i_cMotionCommands_mJointPosSeq
 class _0RL_cd_7ac480c4252a17cd_11000000
   : public omniCallDescriptor
 {
@@ -886,15 +893,12 @@ public:
   
   MotionCommands::JointPosSeq_var arg_0_;
   const MotionCommands::JointPosSeq* arg_0;
-  MotionCommands::DoubleSeq_var arg_1_;
-  const MotionCommands::DoubleSeq* arg_1;
   MotionCommands::RETURN_ID_var result;
 };
 
 void _0RL_cd_7ac480c4252a17cd_11000000::marshalArguments(cdrStream& _n)
 {
   (const MotionCommands::JointPosSeq&) *arg_0 >>= _n;
-  (const MotionCommands::DoubleSeq&) *arg_1 >>= _n;
 
 }
 
@@ -903,9 +907,6 @@ void _0RL_cd_7ac480c4252a17cd_11000000::unmarshalArguments(cdrStream& _n)
   arg_0_ = new MotionCommands::JointPosSeq;
   (MotionCommands::JointPosSeq&)arg_0_ <<= _n;
   arg_0 = &arg_0_.in();
-  arg_1_ = new MotionCommands::DoubleSeq;
-  (MotionCommands::DoubleSeq&)arg_1_ <<= _n;
-  arg_1 = &arg_1_.in();
 
 }
 
@@ -928,16 +929,15 @@ _0RL_lcfn_7ac480c4252a17cd_21000000(omniCallDescriptor* cd, omniServant* svnt)
 {
   _0RL_cd_7ac480c4252a17cd_11000000* tcd = (_0RL_cd_7ac480c4252a17cd_11000000*)cd;
   _impl_MotionCommands* impl = (_impl_MotionCommands*) svnt->_ptrToInterface(MotionCommands::_PD_repoId);
-  tcd->result = impl->movePTPJointAbsSeq(*tcd->arg_0, *tcd->arg_1);
+  tcd->result = impl->movePTPJointAbsSeq(*tcd->arg_0);
 
 
 }
 
-MotionCommands::RETURN_ID* _objref_MotionCommands::movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq, const MotionCommands::DoubleSeq& timeSeq)
+MotionCommands::RETURN_ID* _objref_MotionCommands::movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq)
 {
   _0RL_cd_7ac480c4252a17cd_11000000 _call_desc(_0RL_lcfn_7ac480c4252a17cd_21000000, "movePTPJointAbsSeq", 19);
   _call_desc.arg_0 = &(MotionCommands::JointPosSeq&) jointPointsSeq;
-  _call_desc.arg_1 = &(MotionCommands::DoubleSeq&) timeSeq;
 
   _invoke(_call_desc);
   return _call_desc.result._retn();
