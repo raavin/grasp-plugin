@@ -687,12 +687,12 @@ class _objref_MotionCommands :
 {
 public:
   MotionCommands::RETURN_ID* closeGripper();
-  MotionCommands::RETURN_ID* moveGripper(const MotionCommands::DoubleSeq& angle);
+  MotionCommands::RETURN_ID* moveGripper(const MotionCommands::DoubleSeq& r_angle, const MotionCommands::DoubleSeq& l_angle);
   MotionCommands::RETURN_ID* moveLinearCartesianAbs(const MotionCommands::CarPosWithElbow& rArm, const MotionCommands::CarPosWithElbow& lArm);
   MotionCommands::RETURN_ID* moveLinearCartesianRel(const MotionCommands::CarPosWithElbow& rArm, const MotionCommands::CarPosWithElbow& lArm);
   MotionCommands::RETURN_ID* movePTPJointAbs(const MotionCommands::JointPos& jointPoints);
   MotionCommands::RETURN_ID* movePTPJointRel(const MotionCommands::JointPos& jointPoints);
-  MotionCommands::RETURN_ID* movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq, const MotionCommands::DoubleSeq& timeSeq);
+  MotionCommands::RETURN_ID* movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq);
   MotionCommands::RETURN_ID* openGripper();
   MotionCommands::RETURN_ID* setSpeedCartesian(MotionCommands::ULONG spdRatio);
   MotionCommands::RETURN_ID* setSpeedJoint(MotionCommands::ULONG spdRatio);
@@ -730,12 +730,12 @@ public:
   virtual ~_impl_MotionCommands();
 
   virtual MotionCommands::RETURN_ID* closeGripper() = 0;
-  virtual MotionCommands::RETURN_ID* moveGripper(const MotionCommands::DoubleSeq& angle) = 0;
+  virtual MotionCommands::RETURN_ID* moveGripper(const MotionCommands::DoubleSeq& r_angle, const MotionCommands::DoubleSeq& l_angle) = 0;
   virtual MotionCommands::RETURN_ID* moveLinearCartesianAbs(const MotionCommands::CarPosWithElbow& rArm, const MotionCommands::CarPosWithElbow& lArm) = 0;
   virtual MotionCommands::RETURN_ID* moveLinearCartesianRel(const MotionCommands::CarPosWithElbow& rArm, const MotionCommands::CarPosWithElbow& lArm) = 0;
   virtual MotionCommands::RETURN_ID* movePTPJointAbs(const MotionCommands::JointPos& jointPoints) = 0;
   virtual MotionCommands::RETURN_ID* movePTPJointRel(const MotionCommands::JointPos& jointPoints) = 0;
-  virtual MotionCommands::RETURN_ID* movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq, const MotionCommands::DoubleSeq& timeSeq) = 0;
+  virtual MotionCommands::RETURN_ID* movePTPJointAbsSeq(const MotionCommands::JointPosSeq& jointPointsSeq) = 0;
   virtual MotionCommands::RETURN_ID* openGripper() = 0;
   virtual MotionCommands::RETURN_ID* setSpeedCartesian(MotionCommands::ULONG spdRatio) = 0;
   virtual MotionCommands::RETURN_ID* setSpeedJoint(MotionCommands::ULONG spdRatio) = 0;

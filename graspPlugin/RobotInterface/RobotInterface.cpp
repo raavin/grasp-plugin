@@ -352,7 +352,7 @@ int RobotInterface::HIROMove()
 	cout << "movePTPJointAbsSeq" << endl;
 	//RTC::CorbaConsumer<MotionCommands> motion = HIROControllerRtc::instance()->comp_->motion();
 	//if (::CORBA::is_nil(HIROControllerRtc::instance()->comp_->motion.getObject()) == false) {
-	MotionCommands::RETURN_ID * rid = HIROControllerRtc::instance()->comp_->motion()->movePTPJointAbsSeq(jpSeq, mtSeq);
+	MotionCommands::RETURN_ID * rid = HIROControllerRtc::instance()->comp_->motion()->movePTPJointAbsSeq(jpSeq);
 	cout << "ret: " << rid->id << "; " << rid->comment << endl;
 //	} else {
 //		cout << "motion is nil." << endl;

@@ -5,7 +5,7 @@
  *
  * @file HIROControllerStub.cpp 
  * @brief HIROController client stub wrapper code
- * @date Thu Oct 20 15:08:39 2011 
+ * @date Wed Feb 22 12:07:56 2012 
  *
  */
 
