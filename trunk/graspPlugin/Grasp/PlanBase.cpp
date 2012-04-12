@@ -698,6 +698,28 @@ double PlanBase::calcContactPoint(ColdetLinkPairPtr cPair, Vector3 &Po, Vector3 
 
 }
 
+Matrix3 makeOrthogonal(const MatrixXd A, const VectorXd b)
+{
+	vector<double> c;
+	for(size_t i=0; i<b.size(); i++)
+			c.push_back(fabs(b(i)));
+
+	Matrix3 A_ = d2v(A);
+	int j=argmax(c);
+	Vector3 v0 = A_.col(j);
+	Vector3 v1 = A_.col((j+1)%3);
+
+	double r=dot(v0,v1);
+	v1 = (-r*v0 + v1)/sqrt(1-r*r);
+	Vector3 v2 = cross(v0,v1);
+
+	for(int i=0; i<3; i++){
+		A_(i, (j+1)%3) = v1(i);
+		A_(i, (j+2)%3) = v2(i);
+	}
+
+	return A_;
+}
 
 void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& center, Vector3& com, Matrix3& Rot) {
 	//objVis and objPos shoulde be defined in advance.
@@ -773,12 +795,13 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 	int info;
 	info = calcEigenVectors(distribute, evec, eval);
 
-	Vector3 e[3];
+	Rot = makeOrthogonal(evec, eval);
+	//Rot =  (d2v(evec));
 
-	
+	Vector3 e[3];
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
-			e[j][i] = evec(i, j);
+			e[j][i] = Rot(i, j);
 	
 
 	Vector3 pt_max(0, 0, 0), pt_min(0, 0, 0);
@@ -791,8 +814,6 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 			if (tmp < pt_min[j]) pt_min[j] = tmp;
 		}
 	}
-
-	Rot =  (d2v(evec));
 
 	edge =  (pt_max - pt_min);
 	center =  average + 0.5 * (pt_max + pt_min);
