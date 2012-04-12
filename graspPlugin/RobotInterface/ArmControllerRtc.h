@@ -9,20 +9,23 @@
 #define HIROCONTROLLERRTC_H
 
 #include "../Grasp/GraspController.h"
-#include "HIROControllerRTC/HIROController.hh"
-#include "HIROControllerRTC/HIROController.h"
+#include "ArmControllerRtc/HIROController.hh"
+#include "ArmControllerRtc/ArmController.h"
 
 namespace grasp {
 
-class HIROControllerRtc {
+class ArmControllerRtc {
 	public:
-		HIROControllerRtc() {}
-		~HIROControllerRtc() {}
-		static HIROControllerRtc* instance();
+		ArmControllerRtc() {}
+		~ArmControllerRtc() {}
+		static ArmControllerRtc* instance();
 		int RtcStart();
 		static void MyModuleInit(RTC::Manager* manager);
 
-		::HIROController * comp_;
+		::ArmController * comp_;
+
+
+
 };
 
 }

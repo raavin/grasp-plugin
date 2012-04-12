@@ -2,6 +2,7 @@
 #define _RROBOTINTERFACE_H
 
 #include <cnoid/BodyItem>	/* modified by qtconv.rb 0th rule*/
+#include "ArmControllerRtc.h"
 
 
 using namespace std;
@@ -46,7 +47,12 @@ class RobotInterface {
 	bool moveUp;
 
 	private :
-		int HIROMove();
+		bool isSingleArm() { return PlanBase::instance()->armsList.size() == 1; }
+		bool isDualArm() { return PlanBase::instance()->armsList.size() == 2; }
+		int moveDualArm();
+		int moveSingleArm();
+		::ArmController * controllerRtc() { return ArmControllerRtc::instance()->comp_; };
+		int numJoints() { return PlanBase::instance()->arm()->arm_path->numJoints(); }
 };
 
 

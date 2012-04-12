@@ -9,9 +9,10 @@
 #include <cnoid/ItemTreeView>	/* modified by qtconv.rb 0th rule*/
 #include <cnoid/RootItem>	/* modified by qtconv.rb 0th rule*/
 //#include <cnoid/PoseSeqItem>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/MessageView>
+#include <cnoid/EigenUtil>
 #include "../Grasp/GraspController.h"
 #include "../GripperManipulation/RobotLocalFunctions.h"
-#include "HIROControllerRtc.h"
 
 using namespace std;
 using namespace boost;
@@ -185,206 +186,284 @@ void RobotInterface::doRecoginitionAndRead() {
 }
 
 void RobotInterface::doCapture() {
+
 		int error = system("/home/vvv/work/cap/capture.sh");
 		if(error) cout << error<< endl;
 }
 
 void RobotInterface::doJntCalib() {
 
-		if(PlanBase::instance()->bodyItemRobot()->body()->name()=="HIRO"){
-			HIROControllerRtc::instance()->comp_->manipulator()->calibrateJoint();
+		if(isDualArm()) {
+			try {
+				controllerRtc()->manipulator()->calibrateJoint();
+			} catch (CORBA::NO_IMPLEMENT e) {
+				cerr << "setSoftLimitJoint: NO_IMPLEMENT" << endl;
+				throw ;
+			}
 		}
-
 
 }
+
 void RobotInterface::doSrvOn() {
 
-		//string func = "doServoOn()";
-		//runPythonCommand(func);
-
-		if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10"){
-				int error = system("manip start");
-				error = system("manip serv_on");
+		if (isDualArm()){
+			try {
+				controllerRtc()->manipulator()->servoOn();
+			} catch (CORBA::NO_IMPLEMENT e) {
+				cerr << "servoOn: NO_IMPLEMENT" << endl;
+				throw ;
+			}
+		} else if (isSingleArm()) {
+			try {
+				controllerRtc()->manipulator_common()->servoON();
+			} catch (CORBA::NO_IMPLEMENT e) {
+				cerr << "servoON: NO_IMPLEMENT" << endl;
+				throw ;
+			}
 		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10_VVV"){
-				int error = system("/usr/local/Robot/bin/pa10-q -s pa10server init 2> /dev/null");
-				error = system("/usr/local/Robot/bin/pa10-q -s pa10server restart");
-		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="HIRO"){
-				HIROControllerRtc::instance()->comp_->manipulator()->servoOn();
-		}
-
-//		string func = "print multiply_(2,3)";
-//		runPythonCommand(func);
 
 }
 
 void RobotInterface::doSrvOff() {
 
-		//string func = "doServoOff()";
-		//runPythonCommand(func);
-		if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10"){
-				int error = system("manip serv_off");
-				error = system("manip end");
+		if (isDualArm()) {
+			try {
+				controllerRtc()->manipulator()->servoOff();
+			} catch (CORBA::NO_IMPLEMENT e) {
+				cerr << "servoOff: NO_IMPLEMENT" << endl;
+				throw ;
+			}
+		} else if (isSingleArm()) {
+			try {
+				controllerRtc()->manipulator_common()->servoOFF();
+			} catch (CORBA::NO_IMPLEMENT e) {
+				cerr << "servoOFF: NO_IMPLEMENT" << endl;
+				throw;
+			}
 		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10_VVV"){
-				int error = system("/usr/local/Robot/bin/pa10-q -s pa10server \"speed 10\""); if(error) cout << error<< endl;
-				error =system("/usr/local/Robot/bin/pa10-q -s pa10server \" rotate 0.0 0.0 0.0 0.0 0.0 0.0 0.0 \" ");if(error) cout << error<< endl;
-		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="HIRO"){
-				HIROControllerRtc::instance()->comp_->manipulator()->servoOff();
-		}
-
 }
 
 void RobotInterface::doHome() {
-		//string func = "gotoHomePosition()";
-		//runPythonCommand(func);
-		int error;
-		if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10"){
-				error = system("manip abs_jmove 0.0 0.0 0.0 90.0 0.0 90.0 0.0");
-		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10_VVV"){
-				error = system("/usr/local/Robot/bin/pa10-q -s pa10server \"speed 10\""); if(error) cout << error<< endl;
-				error = system("/usr/local/Robot/bin/pa10-q -s pa10server \" rotate 0.0 0.0 0.0 90.0 180.0 -90.0 0.0 \" "); if(error) cout << error<< endl;
 
+	if (isDualArm()){
+		try {
+			controllerRtc()->manipulator()->goInitial();
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "goInitial: NO_IMPLEMENT" << endl;
+			throw;
 		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="HIRO"){
-				HIROControllerRtc::instance()->comp_->manipulator()->goInitial();
+	} else if (isSingleArm()){
+		RTC::JointPos jp;
+		RTC::RETURN_ID * ret;
+
+		try {
+			DoubleSeq speed;
+			CORBA_SeqUtil::push_back(speed, 10);
+			ret = controllerRtc()->manipulator_motion()->setMaxSpeedJoint(speed);
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "setSpeedJoint: NO_IMPLEMENT" << endl;
+			throw;
 		}
+
+		YamlNode& poseNode = PlanBase::instance()->body()->info()->get("standardPose");
+		YamlSequence * seq = poseNode.toSequence();
+		for (int i = 0; i < numJoints(); i++) {
+			YamlNode& node = seq->get(i);
+			CORBA_SeqUtil::push_back(jp, radian(node.toDouble()));
+		}
+		try {
+			ret = controllerRtc()->manipulator_motion()->movePTPJointAbs(jp);
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "movePTPJointAbs: NO_IMPLEMENT" << endl;
+			throw;
+		}
+	}
 }
 
 void RobotInterface::doMove() {
 
-		PlanBase* tc = PlanBase::instance();
-
-		if(tc->bodyItemRobot()->body()->name()=="PA10"){
-				ifstream gin("extplugin/graspPlugin/RobotInterface/data/grasp.mat");
-
-				double t;
-				gin >> t;
-				gin >> t;
-
-				while(!gin.eof()){
-
-						int error = system("manip set_max_ang_vel 20.0");
-						if (error != 0) {
-							cout << "warning: manip returns " << error << endl;
-						}
-
-						string command= "manip abs_jmove";
-						char chr[256];
-
-						for(int i=0; i<tc->arm()->arm_path->numJoints(); i++){
-								gin >> t;
-								sprintf(chr, "%f", t);
-								command = command + " " + string(chr);
-						}
-
-						cout << command << endl;
-
-						error = system(command.c_str());
-						usleep(1300000);
-
-						gin >> t;
-						gin >> t;
-						gin >> t;
-						if((int)t == tc->GRASPING)
-								error = system("manip grasp");
-						else
-								error = system("manip hand_open");
-				}
-
-				int error = system("manip hand_open");
-				if (error != 0) {
-					cout << "warning: manip hand_open returns " << error << endl;
+		if(isSingleArm()){
+			    std::string name = PlanBase::instance()->bodyItemRobot()->body()->name();
+				if(name == "PA10_VVV"){
+					showWarningDialog("PA10_VVVには未対応です");
+					// PA10_VVVはまだ共通IFに書き直せない(2012/03/08)
+					//		int error = system("/home/Robot/freeformdemo/shells/grasp_object_excade.sh");
+					//		if (error) cout << error<< endl;
+				} else {
+					int error = moveSingleArm();
+					if (error == EXIT_FAILURE) {
+						cout << "warning: PA10Move returns " << error << endl;
+					}
 				}
 		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="PA10_VVV"){
-				int error = system("/home/Robot/freeformdemo/shells/grasp_object_excade.sh");
-				if(error) cout << error<< endl;
-		}
-		else if(PlanBase::instance()->bodyItemRobot()->body()->name()=="HIRO"){
-			    int error = HIROMove();
-			    if (error) {
-			    	cout << "warning: Hiro returns " << error << endl;
+		else if(isDualArm()){
+			    int error = moveDualArm();
+			    if (error == EXIT_FAILURE) {
+			    	cout << "warning: HIROMove returns " << error << endl;
 			    }
 		}
 
 }
 
-int RobotInterface::HIROMove()
+int RobotInterface::moveSingleArm()
 {
-	static const double offset = 10.0;
-
-	GripperManipulation::RobotLocalFunctions rb;
-
 	PlanBase* tc = PlanBase::instance();
-	int error = 0;
-	vector<VectorXd>& jointSeq = tc->jointSeq;
-	vector<double> & motionTimeSeq = tc->motionTimeSeq;
-	MotionCommands::DoubleSeq mtSeq;
-	int size = jointSeq.size();
-	MotionCommands::JointPosSeq jpSeq;
-	jpSeq.length(size);
-	mtSeq.length(size);
-	static const int angle_size = 23;
-	for (int i = 0; i < size; i++){
-		vector<double> angles(angle_size);
-		rb.convertAngles(jointSeq[i], angles, offset);
-		try {
-			rb.checkAngles(angles);
-		} catch (std::vector<double> angles) {
-			char jointlogfile[256];
-			rb.writeJointSeq(jointlogfile, 255, jointSeq, motionTimeSeq);
-			cout << "Wrong jointSeq! Check " << jointlogfile << endl;
-			throw angles;
-		}
-		MotionCommands::JointPos jp(angle_size + 1);
-		jp.length(angle_size + 1);
-		for (int j = 0; j < angle_size; j++) {
-			jp[j] = angles[j];
-		}
-		jpSeq[i] = jp;
-		mtSeq[i] = motionTimeSeq[i];
-		cout << "motion time(" << i << "):" << mtSeq[i] << endl;
+
+	const char * grasp_file = "extplugin/graspPlugin/RobotInterface/data/grasp.mat";
+	ifstream gin(grasp_file);
+	if (gin.fail()) {
+		showWarningDialog("grasp.mat が読み込めません。動作計画(PathPlan) を行ってください。");
+		cerr << grasp_file << " not found." << endl;
+		return EXIT_FAILURE;
 	}
-	cout << "movePTPJointAbsSeq" << endl;
-	//RTC::CorbaConsumer<MotionCommands> motion = HIROControllerRtc::instance()->comp_->motion();
-	//if (::CORBA::is_nil(HIROControllerRtc::instance()->comp_->motion.getObject()) == false) {
-	MotionCommands::RETURN_ID * rid = HIROControllerRtc::instance()->comp_->motion()->movePTPJointAbsSeq(jpSeq);
-	cout << "ret: " << rid->id << "; " << rid->comment << endl;
-//	} else {
-//		cout << "motion is nil." << endl;
-//	}
-	return error;
+
+	double t;
+	gin >> t;
+	gin >> t;
+
+	RETURN_ID * ret;
+
+	int n = 0;
+	while(!gin.eof()){
+		try {
+			DoubleSeq speed;
+			CORBA_SeqUtil::push_back(speed, 20.0);
+			ret = controllerRtc()->manipulator_motion()->setMaxSpeedJoint(speed);
+			if (ret->id != EXIT_SUCCESS) {
+				cout << "warning: setMaxSpeedJoint returns " << ret->id << ": " << ret->comment << endl;
+				break;
+			}
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "setMaxSpeedJoint: NO_IMPLEMENT" << endl;
+			throw;
+		}
+		RTC::JointPos jp;
+		cout << "jp[" << n++ << "]";
+		for (int i = 0; i < numJoints(); i++) {
+			gin >> t;
+			CORBA_SeqUtil::push_back(jp, radian(t));
+			cout << t << ", ";
+		}
+		cout << endl;
+		try {
+			ret = controllerRtc()->manipulator_motion()->movePTPJointAbs(jp);
+			if (ret->id != EXIT_SUCCESS) {
+				cout << "warning: movePTPJointAbs returns " << ret->id << ": " << ret->comment << endl;
+				break;
+			}
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "movePTPJointAbs: NO_IMPLEMENT" << endl;
+			throw;
+		}
+		usleep(1300000);
+
+		gin >> t;
+		gin >> t;
+		gin >> t;
+		try {
+			if ((int) t == tc->GRASPING) {
+				ret = controllerRtc()->manipulator_motion()->closeGripper();
+			} else {
+				ret = controllerRtc()->manipulator_motion()->openGripper();
+			}
+			if (ret->id != EXIT_SUCCESS) {
+				cout << "warning: open/close Gripper returns " << ret->id << ": " << ret->comment << endl;
+				break;
+			}
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "open/close Gripper: NO_IMPLEMENT" << endl;
+			throw;
+		}
+
+	}
+
+	try {
+		ret = controllerRtc()->manipulator_motion()->openGripper();
+		ret = controllerRtc()->manipulator_motion()->resume();
+		if (ret->id != EXIT_SUCCESS) {
+			cout << "warning: open Gripper returns " << ret->id << ": " << ret->comment << endl;
+		}
+	} catch (CORBA::NO_IMPLEMENT e) {
+		cerr << "openGripper: NO_IMPLEMENT" << endl;
+		throw;
+	}
+
+	return ret->id;
+}
+
+int RobotInterface::moveDualArm()
+{
+
+		static const double offset = 10.0;
+
+		GripperManipulation::RobotLocalFunctions rb;
+
+		PlanBase* tc = PlanBase::instance();
+		int error = 0;
+		vector<VectorXd>& jointSeq = tc->jointSeq;
+		vector<double> & motionTimeSeq = tc->motionTimeSeq;
+		MotionCommands::DoubleSeq mtSeq;
+		int size = jointSeq.size();
+		MotionCommands::JointPosSeq jpSeq;
+		jpSeq.length(size);
+		mtSeq.length(size);
+		static const int angle_size = 23;
+		for (int i = 0; i < size; i++){
+			vector<double> angles(angle_size);
+			rb.convertAngles(jointSeq[i], angles, offset);
+			try {
+				rb.checkAngles(angles);
+			} catch (std::vector<double> angles) {
+				char jointlogfile[256];
+				rb.writeJointSeq(jointlogfile, 255, jointSeq, motionTimeSeq);
+				cout << "Wrong jointSeq! Check " << jointlogfile << endl;
+				throw angles;
+			}
+			MotionCommands::JointPos jp(angle_size + 1);
+			jp.length(angle_size + 1);
+			for (int j = 0; j < angle_size; j++) {
+				jp[j] = radian(angles[j]);
+			}
+			jpSeq[i] = jp;
+			mtSeq[i] = motionTimeSeq[i];
+			cout << "motion time(" << i << "):" << mtSeq[i] << endl;
+		}
+		cout << "movePTPJointAbsSeq" << endl;
+		try {
+			MotionCommands::RETURN_ID * rid = controllerRtc()->motion()->movePTPJointAbsSeq(jpSeq, mtSeq);
+			cout << "ret: " << rid->id << "; " << rid->comment << endl;
+		} catch (CORBA::NO_IMPLEMENT e) {
+			cerr << "setSoftLimitJoint: NO_IMPLEMENT" << endl;
+			throw ;
+		}
+		return error;
 }
 
 int RobotInterface::objName2Id(string objname, string obj_data){
 
-	std::ifstream fin_obj(obj_data.c_str());
+		std::ifstream fin_obj(obj_data.c_str());
 
-	if(!fin_obj){
-		cout << obj_data <<  " not found" << endl;
-		return -1;
-	}
-
-	while(fin_obj){
-		string tmp_obj;
-		stringstream li2;
-		string line2;
-		int qtmp;
-
-
-		getline(fin_obj,line2);
-		li2 << line2;
-
-		li2 >> qtmp;
-		li2 >> tmp_obj;
-
-		if(tmp_obj.find(objname,0) != string::npos){
-			return qtmp;
+		if(!fin_obj){
+			cout << obj_data <<  " not found" << endl;
+			return -1;
 		}
-	}
-	return -1;
+
+		while(fin_obj){
+			string tmp_obj;
+			stringstream li2;
+			string line2;
+			int qtmp;
+
+
+			getline(fin_obj,line2);
+			li2 << line2;
+
+			li2 >> qtmp;
+			li2 >> tmp_obj;
+
+			if(tmp_obj.find(objname,0) != string::npos){
+				return qtmp;
+			}
+		}
+		return -1;
 }
