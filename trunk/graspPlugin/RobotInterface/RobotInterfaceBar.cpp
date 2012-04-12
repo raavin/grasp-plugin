@@ -112,11 +112,13 @@ void RobotInterfaceBar::onJointCalibButtonClicked(){
 	try {
 		RobotInterface::instance()->doJntCalib();
 	} catch (CORBA::INV_OBJREF e) {
-		showWarningDialog("CORBA::INV_OBJREF 例外: HiroNX ポートは接続されていますか?");
+		showWarningDialog("CORBA::INV_OBJREF 例外: ポートは接続されていますか?");
 	} catch (CORBA::OBJECT_NOT_EXIST e) {
 		showWarningDialog("CORBA::OBJECT_NOT_EXIST 例外: RTコンポーネントはアクティベートされていますか?");
+	} catch (CORBA::NO_IMPLEMENT e) {
+		showWarningDialog("CORBA::NO_IMPLEMENT 例外: メソッドは実装されていますか？(エラー出力を確認)");
 	} catch (CORBA::UNKNOWN e) {
-		showWarningDialog("CORBA::UNKNOWN 例外: HIRO はセットアップされていますか?");
+		showWarningDialog("CORBA::UNKNOWN 例外: ロボットはセットアップされていますか?");
 	} catch (CORBA::SystemException& e) {
 		char msg[1024];
 		sprintf(msg, "%s(%lu) 例外: 未対応のシステム例外が発生しました", e._name(), (unsigned long)e.minor());
@@ -132,11 +134,13 @@ void RobotInterfaceBar::onSrvOnButtonClicked(){
 	try {
 		RobotInterface::instance()->doSrvOn();
 	} catch (CORBA::INV_OBJREF e) {
-		showWarningDialog("CORBA::INV_OBJREF 例外: HiroNX ポートは接続されていますか?");
+		showWarningDialog("CORBA::INV_OBJREF 例外: ポートは接続されていますか?");
 	} catch (CORBA::OBJECT_NOT_EXIST e) {
 		showWarningDialog("CORBA::OBJECT_NOT_EXIST 例外: RTコンポーネントはアクティベートされていますか?");
+	} catch (CORBA::NO_IMPLEMENT e) {
+		showWarningDialog("CORBA::NO_IMPLEMENT 例外: メソッドは実装されていますか？(エラー出力を確認)");
 	} catch (CORBA::UNKNOWN e) {
-		showWarningDialog("CORBA::UNKNOWN 例外: HIRO はセットアップされていますか?");
+		showWarningDialog("CORBA::UNKNOWN 例外: ロボットはセットアップされていますか?");
 	} catch (CORBA::Exception& e) {
 		char msg[1024];
 		sprintf(msg, "%s 例外: 未対応の例外が発生しました", e._name());
@@ -148,11 +152,13 @@ void RobotInterfaceBar::onSrvOffButtonClicked(){
 	try {
 		RobotInterface::instance()->doSrvOff();
 	} catch (CORBA::INV_OBJREF e) {
-		showWarningDialog("CORBA::INV_OBJREF 例外: HiroNX ポートは接続されていますか?");
+		showWarningDialog("CORBA::INV_OBJREF 例外: ポートは接続されていますか?");
 	} catch (CORBA::OBJECT_NOT_EXIST e) {
 		showWarningDialog("CORBA::OBJECT_NOT_EXIST 例外: RTコンポーネントはアクティベートされていますか?");
+	} catch (CORBA::NO_IMPLEMENT e) {
+		showWarningDialog("CORBA::NO_IMPLEMENT 例外: メソッドは実装されていますか？(エラー出力を確認)");
 	} catch (CORBA::UNKNOWN e) {
-		showWarningDialog("CORBA::UNKNOWN 例外: HIRO はセットアップされていますか?");
+		showWarningDialog("CORBA::UNKNOWN 例外: ロボットはセットアップされていますか?");
 	} catch (CORBA::SystemException& e) {
 		char msg[1024];
 		sprintf(msg, "%s(%lu) 例外: 未対応のシステム例外が発生しました", e._name(), (unsigned long)e.minor());
@@ -168,11 +174,13 @@ void RobotInterfaceBar::onHomeButtonClicked(){
 	try {
 		RobotInterface::instance()->doHome();
 	} catch (CORBA::INV_OBJREF e) {
-		showWarningDialog("CORBA::INV_OBJREF 例外: HiroNX ポートは接続されていますか?");
+		showWarningDialog("CORBA::INV_OBJREF 例外: ポートは接続されていますか?");
 	} catch (CORBA::OBJECT_NOT_EXIST e) {
 		showWarningDialog("CORBA::OBJECT_NOT_EXIST 例外: RTコンポーネントはアクティベートされていますか?");
+	} catch (CORBA::NO_IMPLEMENT e) {
+		showWarningDialog("CORBA::NO_IMPLEMENT 例外: メソッドは実装されていますか？(エラー出力を確認)");
 	} catch (CORBA::UNKNOWN e) {
-		showWarningDialog("CORBA::UNKNOWN 例外: HIRO はセットアップされていますか?");
+		showWarningDialog("CORBA::UNKNOWN 例外: ロボットはセットアップされていますか?");
 	} catch (CORBA::SystemException& e) {
 		char msg[1024];
 		sprintf(msg, "%s(%lu) 例外: 未対応のシステム例外が発生しました", e._name(), (unsigned long)e.minor());
@@ -188,11 +196,13 @@ void RobotInterfaceBar::onMoveButtonClicked(){
 	try {
 		RobotInterface::instance()->doMove();
 	} catch (CORBA::INV_OBJREF e) {
-		showWarningDialog("CORBA::INV_OBJREF 例外: HIROController ポートは接続されていますか?");
+		showWarningDialog("CORBA::INV_OBJREF 例外: ポートは接続されていますか?");
 	} catch (CORBA::OBJECT_NOT_EXIST e) {
 		showWarningDialog("CORBA::OBJECT_NOT_EXIST 例外: RTコンポーネントはアクティベートされていますか?");
+	} catch (CORBA::NO_IMPLEMENT e) {
+		showWarningDialog("CORBA::NO_IMPLEMENT 例外: メソッドは実装されていますか？(エラー出力を確認)");
 	} catch (CORBA::UNKNOWN e) {
-		showWarningDialog("CORBA::UNKNOWN 例外: HIRO はセットアップされていますか?");
+		showWarningDialog("CORBA::UNKNOWN 例外: ロボットはセットアップされていますか?");
 	} catch (CORBA::SystemException& e) {
 		char msg[1024];
 		sprintf(msg, "%s(%lu) 例外: 未対応のシステム例外が発生しました", e._name(), (unsigned long)e.minor());

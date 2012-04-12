@@ -13,8 +13,8 @@ using namespace std;
 using namespace boost;
 using namespace cnoid;
 using namespace grasp;
-#include "HIROControllerRTC/HIROController.h"
-#include "HIROControllerRtc.h"
+#include "ArmControllerRtc/ArmController.h"
+#include "ArmControllerRtc.h"
 
 
 class RobotInterfacePlugin : public cnoid::Plugin
@@ -36,7 +36,7 @@ public:
 
 	virtual bool initialize() {
 		addToolBar(RobotInterfaceBar::instance());
-		HIROControllerRtc::instance()->RtcStart();
+		ArmControllerRtc::instance()->RtcStart();
 
 		return true;
 	}
