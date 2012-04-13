@@ -133,14 +133,7 @@ bool Arm::IK_arm(const Vector3 &p, const Matrix3 &R0) {
 		for (int i = 0; i < n; ++i) {
 			arm_path->joint(i)->q = qorg[i];
 		}
-		arm_path->calcInverseKinematics(p,R0);
-		arm_path->calcForwardKinematics();
-	}else{
-		for(int i=0; i<n;i++){
-			qorg[i] = arm_path->joint(i)->q;
-		}
 	}
-
 	
 	return isConverged;
 }
