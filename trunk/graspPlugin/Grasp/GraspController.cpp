@@ -697,6 +697,7 @@ void GraspController ::parseParameters( istream &fp ) {
 	Vector3 w;
 	int k;
 	const string fingerAlias[5] = {"Thumb_", "Index_", "Middle_", "Ring_", "Little_"};
+	dGRC_Pos_ << 0,0,0;
 	
 	GetString(fp, buf);
 	// skip the first [START] or [BEGIN]
