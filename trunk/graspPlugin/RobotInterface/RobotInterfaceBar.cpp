@@ -11,6 +11,7 @@
 #include <omniORB4/CORBA.h>
 #include "../Grasp/GraspController.h"
 
+using namespace std;
 using namespace boost;
 using namespace cnoid;
 using namespace grasp;
