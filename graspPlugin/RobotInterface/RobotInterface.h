@@ -1,11 +1,19 @@
 #ifndef _ROBOTINTERFACE_H
 #define _RROBOTINTERFACE_H
 
+#include <stdio.h>
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
+
 #include <cnoid/BodyItem>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/ItemTreeView>
+#include <cnoid/RootItem>
+#include <cnoid/MessageView>
+#include <cnoid/EigenUtil>
 #include "ArmControllerRtc.h"
-
-
-using namespace std;
+#include "../Grasp/GraspController.h"
+#include "../GripperManipulation/RobotLocalFunctions.h"
 
 namespace grasp{
 
@@ -28,7 +36,7 @@ class RobotInterface {
 		return instance;
 	};
 
-	virtual bool runPythonCommand(string func);
+	virtual bool runPythonCommand(std::string func);
 
 	virtual void doReadFromFile();
 	virtual void doRecoginitionAndRead();
@@ -43,7 +51,7 @@ class RobotInterface {
 
 	protected :
 
-	virtual int objName2Id(string objname, string obj_data);
+	virtual int objName2Id(std::string objname, std::string obj_data);
 	bool moveUp;
 
 	private :

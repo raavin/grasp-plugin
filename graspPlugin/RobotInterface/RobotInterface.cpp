@@ -2,17 +2,6 @@
 
 #include <Python.h>
 #include "RobotInterface.h"
-#include <stdio.h>
-#include <fstream>
-#include <iostream>
-#include <unistd.h>
-#include <cnoid/ItemTreeView>	/* modified by qtconv.rb 0th rule*/
-#include <cnoid/RootItem>	/* modified by qtconv.rb 0th rule*/
-//#include <cnoid/PoseSeqItem>	/* modified by qtconv.rb 0th rule*/
-#include <cnoid/MessageView>
-#include <cnoid/EigenUtil>
-#include "../Grasp/GraspController.h"
-#include "../GripperManipulation/RobotLocalFunctions.h"
 
 using namespace std;
 using namespace boost;
@@ -23,7 +12,6 @@ RobotInterface::RobotInterface(){
 	isMulti=false;
     return;
 }
-
 
 bool RobotInterface::runPythonCommand(string func){
 
@@ -86,7 +74,6 @@ void RobotInterface::doReadFromFile() {
 		}
 
 
-		//system("./auto_scp.sh");
 		int error = system("cp ~/work/cap/data_cap.mat extplugin/graspPlugin/RobotInterface/data"); if(error) cout << error<< endl;
 
 		//char line[1024];
@@ -197,11 +184,10 @@ void RobotInterface::doJntCalib() {
 			try {
 				controllerRtc()->manipulator()->calibrateJoint();
 			} catch (CORBA::NO_IMPLEMENT e) {
-				cerr << "setSoftLimitJoint: NO_IMPLEMENT" << endl;
+				cerr << "calibrateJoint: NO_IMPLEMENT" << endl;
 				throw ;
 			}
 		}
-
 }
 
 void RobotInterface::doSrvOn() {
@@ -221,7 +207,6 @@ void RobotInterface::doSrvOn() {
 				throw ;
 			}
 		}
-
 }
 
 void RobotInterface::doSrvOff() {
@@ -269,7 +254,8 @@ void RobotInterface::doHome() {
 		YamlSequence * seq = poseNode.toSequence();
 		for (int i = 0; i < numJoints(); i++) {
 			YamlNode& node = seq->get(i);
-			CORBA_SeqUtil::push_back(jp, radian(node.toDouble()));
+			//CORBA_SeqUtil::push_back(jp, radian(node.toDouble()));
+			CORBA_SeqUtil::push_back(jp, node.toDouble());
 		}
 		try {
 			ret = controllerRtc()->manipulator_motion()->movePTPJointAbs(jp);
@@ -309,22 +295,15 @@ int RobotInterface::moveSingleArm()
 {
 	PlanBase* tc = PlanBase::instance();
 
-	const char * grasp_file = "extplugin/graspPlugin/RobotInterface/data/grasp.mat";
-	ifstream gin(grasp_file);
-	if (gin.fail()) {
-		showWarningDialog("grasp.mat が読み込めません。動作計画(PathPlan) を行ってください。");
-		cerr << grasp_file << " not found." << endl;
-		return EXIT_FAILURE;
-	}
-
-	double t;
-	gin >> t;
-	gin >> t;
-
 	RETURN_ID * ret;
 
-	int n = 0;
-	while(!gin.eof()){
+	int numFingJoint = PlanBase::instance()->bodyItemRobot()->body()->numJoints()-numJoints();
+	double openAngle[numFingJoint], closeAngle[numFingJoint], tmpAngle[numFingJoint];
+	bool wro=true, wrc=true;
+
+	int seqSize=tc->graspMotionSeq.size();
+
+	for(int n=0; n<seqSize; n++){
 		try {
 			DoubleSeq speed;
 			CORBA_SeqUtil::push_back(speed, 20.0);
@@ -338,11 +317,11 @@ int RobotInterface::moveSingleArm()
 			throw;
 		}
 		RTC::JointPos jp;
-		cout << "jp[" << n++ << "]";
+		cout << "jp[" << n << "]";
 		for (int i = 0; i < numJoints(); i++) {
-			gin >> t;
-			CORBA_SeqUtil::push_back(jp, radian(t));
-			cout << t << ", ";
+
+			CORBA_SeqUtil::push_back(jp, tc->graspMotionSeq[n].jointSeq[i]);
+			cout << jp[i] << ", ";
 		}
 		cout << endl;
 		try {
@@ -357,15 +336,27 @@ int RobotInterface::moveSingleArm()
 		}
 		usleep(1300000);
 
-		gin >> t;
-		gin >> t;
-		gin >> t;
+		for(int i=0; i<numFingJoint; i++)
+			tmpAngle[i] = tc->graspMotionSeq[n].jointSeq[numJoints()+i];
+
+
 		try {
-			if ((int) t == tc->GRASPING) {
+			if (tc->graspMotionSeq[n].graspingState == tc->GRASPING) {
 				ret = controllerRtc()->manipulator_motion()->closeGripper();
+				if(wrc){
+					for(int i=0; i<numFingJoint; i++)
+						closeAngle[i] = tmpAngle[i];
+					wrc=false;
+				}
 			} else {
 				ret = controllerRtc()->manipulator_motion()->openGripper();
+				if(wro){
+					for(int i=0; i<numFingJoint; i++)
+						openAngle[i] = tmpAngle[i];
+					wro=false;
+				}
 			}
+
 			if (ret->id != EXIT_SUCCESS) {
 				cout << "warning: open/close Gripper returns " << ret->id << ": " << ret->comment << endl;
 				break;
@@ -374,12 +365,21 @@ int RobotInterface::moveSingleArm()
 			cerr << "open/close Gripper: NO_IMPLEMENT" << endl;
 			throw;
 		}
-
 	}
 
 	try {
 		ret = controllerRtc()->manipulator_motion()->openGripper();
 		ret = controllerRtc()->manipulator_motion()->resume();
+		string  openFile = "extplugin/graspPlugin/RobotInterface/" + tc->bodyItemRobot()->body()->name() + "Provider/open.dat";
+		string closeFile = "extplugin/graspPlugin/RobotInterface/" + tc->bodyItemRobot()->body()->name() + "Provider/close.dat";
+		ofstream fileOpen(openFile.c_str()), fileClose(closeFile.c_str());
+		for(int i=0; i<numFingJoint-1; i++){
+			fileOpen << openAngle[i]*180/3.14 << ", ";
+			fileClose << closeAngle[i]*180/3.14 << ", ";
+		}
+		fileOpen << openAngle[numFingJoint-1]*180/3.14;
+		fileClose << closeAngle[numFingJoint-1]*180/3.14;
+
 		if (ret->id != EXIT_SUCCESS) {
 			cout << "warning: open Gripper returns " << ret->id << ": " << ret->comment << endl;
 		}
@@ -422,7 +422,8 @@ int RobotInterface::moveDualArm()
 			MotionCommands::JointPos jp(angle_size + 1);
 			jp.length(angle_size + 1);
 			for (int j = 0; j < angle_size; j++) {
-				jp[j] = radian(angles[j]);
+				//jp[j] = radian(angles[j]);
+				jp[j] = angles[j];
 			}
 			jpSeq[i] = jp;
 			mtSeq[i] = motionTimeSeq[i];
