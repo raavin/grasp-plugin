@@ -7,10 +7,10 @@
 
 #include<stdio.h>
 
-#include <cnoid/LinkPath>	/* modified by qtconv.rb 0th rule*/  
-#include <cnoid/JointPath>	/* modified by qtconv.rb 0th rule*/  
-#include <cnoid/TimeBar>	/* modified by qtconv.rb 0th rule*/  
-#include <cnoid/ItemTreeView>	/* modified by qtconv.rb 0th rule*/  
+#include <cnoid/LinkPath>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/JointPath>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/TimeBar>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/ItemTreeView>	/* modified by qtconv.rb 0th rule*/
 
 #include <dirent.h>
 
@@ -31,46 +31,47 @@ bool PoseSeqItemGrasp::interpolationGrasp(){
 */
 
 bool  TrajectoryPlanner::updateTrajectoryFromMotion(const BodyMotionPtr motionObject, const BodyMotionPtr motionRobot, vector<MotionState>& motionSeq){
-	
+
 		PlanBase* gc= PlanBase::instance();
 		const double frameRate = motionRobot->frameRate();
 		const int numFrames = motionRobot->getNumFrames();
-	
+
 		BodyPtr objectBody = gc->targetObject->bodyItemObject->body();
 		const int numJoints = objectBody->numJoints();
 		const int numLinksToPut = objectBody->numLinks() ;
 		motionObject->setDimension(numFrames, numJoints, numLinksToPut);
 		motionObject->setFrameRate(frameRate);
-		
+
 		MultiAffine3Seq& pseq = *motionObject->linkPosSeq();
 		MultiValueSeq& qseqRobot = *motionRobot->jointPosSeq();
 		//MultiSe3Seq& pseqRobot = *motionRobot->linkPosSeq();
 		BodyPtr robotBody = gc->bodyItemRobot()->body();
-		
+
 		const int numJointsRobot = robotBody->numJoints();
-		
+
 		Link* rootLink = objectBody->rootLink();
-		
+
 		// store the original state
 		//Se3 orgp;
 		//orgp.p = rootLink->p;
 		//orgp.R = rootLink->R;
-		
+
 		vector<MotionState>::iterator itg = motionSeq.begin();
 		gc->setGraspingState( itg->graspingState );
 		gc->setGraspingState2( itg->graspingState2 );
 		itg++;
-		
+
 		gc->object()->p = gc->objVisPos();
 		gc->object()->R = gc->objVisRot();
-		
+
 		for(int frame = 0; frame < numFrames; ++frame){
 			if( (itg != motionSeq.end()) && ( itg->time <= ((double)frame)/frameRate) ){
 				gc->setGraspingState( itg->graspingState );
 				gc->setGraspingState2( itg->graspingState2 );
-				itg++;				
+				itg++;
 			}
-			MultiValueSeq::View qs = qseqRobot.frame(frame);
+			MultiValueSeq::View qs = qseqRobot.frame(frame); //Choreonoid 1.0, 1.1
+			//MultiValueSeq::Frame qs = qseqRobot.frame(frame); //Choreonoid 1.2
 			for(int i=0; i < numJointsRobot; ++i){
 				robotBody->joint(i)->q = qs[i];
 			}
@@ -79,18 +80,18 @@ bool  TrajectoryPlanner::updateTrajectoryFromMotion(const BodyMotionPtr motionOb
 			p.translation() = gc->object()->p;
 			p.linear() = gc->object()->R;
 		}
-		
+
 		// store the moved state
 		rootLink->p = gc->object()->p;
 		rootLink->R = gc->object()->R;
 		objectBody->calcForwardKinematics();
 		gc->flush();
-		
+
 		return true;
 }
 
 TrajectoryPlanner::TrajectoryPlanner(int id){
-	
+
 		PlanBase* gc = PlanBase::instance();
 		static int id_ =0;
 		if(id==0){
@@ -99,17 +100,17 @@ TrajectoryPlanner::TrajectoryPlanner(int id){
 		}
 		stringstream name ;
 		name  << "GraspPoseSeqItem" << id;
-		
+
 		poseSeqItemRobot = new PoseSeqItem();
 		poseSeqItemRobot->setName(name.str());
-		gc->bodyItemRobot()->addSubItem(poseSeqItemRobot);	/* modified by qtconv.rb 4th rule*/  
-		
+		gc->bodyItemRobot()->addSubItem(poseSeqItemRobot);	/* modified by qtconv.rb 4th rule*/
+
 		if(gc->targetObject){
 				poseSeqItemObject = new PoseSeqItem();
 				poseSeqItemObject->setName(name.str());
-				gc->targetObject->bodyItemObject->addSubItem(poseSeqItemObject);	/* modified by qtconv.rb 4th rule*/  
+				gc->targetObject->bodyItemObject->addSubItem(poseSeqItemObject);	/* modified by qtconv.rb 4th rule*/
 		}
-		
+
 }
 
 void TrajectoryPlanner::setStartPos() {
@@ -121,7 +122,7 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		PlanBase* gc = PlanBase::instance();
 
 		//std::vector<MotionState> motionSeq_tmp;
-		
+
 		gc->initialCollision();
 		gc->setGraspingState(PlanBase::NOT_GRASPING);
 		gc->setGraspingState2(PlanBase::NOT_GRASPING);
@@ -129,21 +130,21 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		iniJoint.resize(gc->bodyItemRobot()->body()->numJoints());
 		for(int i=0; i<gc->bodyItemRobot()->body()->numJoints(); i++)
 				iniJoint(i) = 0;
-		
+
 		finJoint.resize(gc->bodyItemRobot()->body()->numJoints());
 		for(int i=0; i<gc->bodyItemRobot()->body()->numJoints(); i++)
 				finJoint(i) = gc->bodyItemRobot()->body()->joint(i)->q;
 
-		
+
 		grasp::SBL planner(gc->bodyItemRobot(), gc->bodyItemEnv);
-		
+
 		vector<VectorXd> config, config_tmp;
 //		vector<VectorXd> configGraspingState;
-	
+
 		bool successAll=true;
 
 		if(gc->jointSeq.size()>1){
-				
+
 				for(unsigned int i=0; i<gc->jointSeq.size()-1; i++){
 						config_tmp.clear();
 
@@ -162,17 +163,11 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 
 						if(!success) successAll = false;
 
-
 						for(unsigned int j=0; j<config_tmp.size(); j++)
 							motionSeq.push_back( MotionState( config_tmp[j], gc->graspingStateSeq[i], gc->graspingStateSeq2[i]) );
-
-						//for(unsigned int j=0; j<config_tmp.size()-1; j++)
-						//	motionSeq_tmp.push_back( MotionState( config_tmp[j], gc->graspingStateSeq[i], gc->graspingStateSeq2[i]) );
 				}
-				//motionSeq_tmp.push_back( MotionState( gc->jointSeq.back(), gc->graspingStateSeq.back(), gc->graspingStateSeq2.back()) );
-
 		}else if(gc->graspMotionSeq.size() > 1){
-			
+
 				for(unsigned int i=0; i<gc->graspMotionSeq.size()-1; i++){
 						config_tmp.clear();
 
@@ -202,34 +197,36 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		else{
 				config.push_back(iniJoint);
 				config.push_back(finJoint);
-				
+
 				planner.call_planner(config, gc->pathPlanDOF);
 				planner.call_smoother(config);
-				
+
 				for(unsigned int j=0; j<config.size(); j++){
 						motionSeq.push_back( MotionState( config[j], gc->NOT_GRASPING, gc->NOT_GRASPING) );
 				}
 		}
+
+
 		gc->setGraspingState(PlanBase::NOT_GRASPING);
 		gc->setGraspingState2(PlanBase::NOT_GRASPING);
 		gc->object()->p = gc->objVisPos();
 		gc->object()->R = gc->objVisRot();
 
 		for(int i=0;i<gc->bodyItemRobot()->body()->numJoints();i++) gc->bodyItemRobot()->body()->joint(i)->q = finJoint(i);
-		gc->bodyItemRobot()->body()->calcForwardKinematics();					 
-		
-		
+		gc->bodyItemRobot()->body()->calcForwardKinematics();
+
+
 		PosePtr pose = new Pose(gc->bodyItemRobot()->body()->numJoints());
 		for(int i=0;i<gc->bodyItemRobot()->body()->numJoints();i++){
 			pose->setJointPosition(gc->bodyItemRobot()->body()->joint(i)->jointId, gc->bodyItemRobot()->body()->joint(i)->q);
 		}
-		
+
 		PosePtr poseObject = new Pose(1);
 		if(gc->targetObject){
 			poseObject->setBaseLink(gc->bodyItemRobot()->body()->link(0)->jointId, gc->objVisPos(), gc->objVisRot());
 			poseSeqItemObject->poseSeq()->insert(poseSeqItemObject->poseSeq()->end(), 0 , poseObject);
 		}
-		
+
 		vector<VectorXd>::iterator it = config.begin();
 		double time = 0;
 		for(int j=0;j<motionSeq.size();j++){
@@ -244,7 +241,7 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		poseSeqItemRobot->updateInterpolation();
 		poseSeqItemRobot->updateTrajectory();
 		ItemTreeView::mainInstance()->selectItem( poseSeqItemRobot->bodyMotionItem() );
-		
+
 		if(gc->targetObject){
 			gc->object()->p = gc->objVisPos();
 			gc->object()->R = gc->objVisRot();
@@ -253,12 +250,12 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 			poseSeqItemObject->bodyMotionItem()->notifyUpdate();
 			ItemTreeView::mainInstance()->selectItem( poseSeqItemObject->bodyMotionItem() );
 		}
-		
+/*
 		DIR *pDir;
 		pDir = opendir("extplugin/graspPlugin/RobotInterface");
-		
+
 		if(pDir != NULL){
-				
+
 				ofstream gout("extplugin/graspPlugin/RobotInterface/data/grasp.mat");
 
 				double p = p=180.0/3.1415;
@@ -271,10 +268,15 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 
 				}
 		}
+		*/
+
+		gc->graspMotionSeq.clear();
+		gc->graspMotionSeq = motionSeq;
+
 		return successAll;
 }
 
 
-	
-	
-	
+
+
+
