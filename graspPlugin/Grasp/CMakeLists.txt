@@ -35,7 +35,12 @@ set(headers
 	exportdef.h
 )
 
-add_library(${libname} SHARED ${sources} ${headers} )
+if(CNOID_VERSION EQUAL 1.0 OR CNOID_VERSION EQUAL 1.1)
+ add_library(${libname} SHARED ${sources} ${headers})
+else()
+ include(FindPythonLibs)
+ add_cnoid_plugin(${libname} SHARED ${sources} ${headers})
+endif()
 add_definitions(-g)
 set_target_properties(${libname} PROPERTIES VERSION 0.0.0 SOVERSION 0)
 #set_target_properties(${libname} PROPERTIES DEFINE_SYMBOL "EXCADE_OPENHRP_MAKE_DLL")
@@ -44,11 +49,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 if(UNIX)
 
 	target_link_libraries(${libname} CnoidBodyPlugin qhull ${PYTHON_LIBRARIES} boost_regex boost_python)
-
-
-  install(TARGETS ${libname}
-    RUNTIME DESTINATION bin CONFIGURATIONS Release Debug
-    LIBRARY DESTINATION ${CNOID_PLUGIN_SUBDIR} CONFIGURATIONS Release Debug)
+    apply_common_setting_for_plugin(${libname})
 
 elseif(MSVC)
 
@@ -95,9 +96,6 @@ if(UNIX)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${RELATIVE_PLUGINS_INSTALL_PATH})
   endif()
 endif()
-
-
-#add_subdirectory(HRG/HRP3P/GrasplotPlugin)
 
 # check qhull
 #find_package(qhull REQUIRED)

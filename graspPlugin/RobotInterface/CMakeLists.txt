@@ -40,7 +40,12 @@ set(headers
 include_directories(${rtc-dir} ${PYTHON_INCLUDE_PATH}
     /usr/include /usr/include/rtm/idl .
 )
-add_library(${libname} SHARED ${sources} ${headers} )
+
+if(CNOID_VERSION EQUAL 1.0 OR CNOID_VERSION EQUAL 1.1)
+ add_library(${libname} SHARED ${sources} ${headers})
+else()
+ add_cnoid_plugin(${libname} SHARED ${sources} ${headers})
+endif()
 
 set_target_properties(${libname} PROPERTIES VERSION 0.0.0 SOVERSION 0)
 
@@ -51,9 +56,7 @@ if(UNIX)
   	${PYTHON_LIBRARIES} uuid dl pthread 
   	omniORB4 omnithread omniDynamic4 RTC coil)
 
-  install(TARGETS ${libname}
-    RUNTIME DESTINATION bin CONFIGURATIONS Release Debug
-    LIBRARY DESTINATION ${CNOID_PLUGIN_SUBDIR} CONFIGURATIONS Release Debug)
+  apply_common_setting_for_plugin(${libname})    
 
 elseif(MSVC)
 
@@ -64,8 +67,25 @@ elseif(MSVC)
 
   set_target_properties(${libname} PROPERTIES COMPILE_FLAGS "/wd4250 /wd4275")
 
+if(CNOID_VERSION EQUAL 1.0 OR CNOID_VERSION EQUAL 1.1)
   install(TARGETS ${libname}
     RUNTIME DESTINATION bin CONFIGURATIONS Release Debug
     LIBRARY DESTINATION lib CONFIGURATIONS Release Debug)
+else()    
+  set_target_properties(${libname} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CNOID_PLUGIN_SUBDIR}
+    ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CNOID_PLUGIN_SUBDIR}
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CNOID_PLUGIN_SUBDIR})
+endif()
 
 endif(UNIX)
+
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/extplugin/graspPlugin/RobotInterface/JacoProvider)
+if(EXISTS  ${PROJECT_SOURCE_DIR}/extplugin/hrgPlugin/RobotModels/Jaco/JacoProvider)
+  ADD_CUSTOM_COMMAND(
+    TARGET ${libname}
+    POST_BUILD
+    COMMAND ln -s ../../hrgPlugin/RobotModels/Jaco/JacoProvider JacoProvider
+    )
+endif()
+endif()

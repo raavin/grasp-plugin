@@ -18,6 +18,10 @@ bool PA10_Arm::IK_arm(const Vector3& p, const Matrix3& R){
 	return IK_arm( p,  R, phi,  q_old);
 }
 
+bool PA10_Arm::IK_arm(const Vector3& p, const Matrix3& R, const VectorXd& q_old){
+	double phi=0;
+	return IK_arm( p,  R, phi,  q_old);
+}
 
 bool  PA10_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const VectorXd& q_old){
 
@@ -134,6 +138,20 @@ bool  PA10_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const Ve
 		//adjustPA10Wrist();
 
 		arm_path->calcForwardKinematics();
+
+		return true;
+}
+
+bool PA10_Arm::getPalmPos(const Vector3& Pco1, const Vector3& Pco2, const Matrix3& Rp, const Vector3& pPcr1, const Matrix3& pRcr1, Vector3& Pp, cnoid::VectorXd& theta)
+{
+		theta.resize(2);
+
+		Vector3 pNcr1 = col(pRcr1, 0);
+		Vector3 pTcr1 = col(pRcr1, 1);
+
+		Pp = 0.5*(Pco1 + Pco2 - Rp*pPcr1 - Rp*pPcr1 );//?
+		theta(0) = -norm2(Pco1-Pco2)/2.0;
+		theta(1) = -theta(0);
 
 		return true;
 }

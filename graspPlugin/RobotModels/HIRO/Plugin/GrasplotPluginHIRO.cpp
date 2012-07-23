@@ -12,15 +12,25 @@ using namespace cnoid;
 using namespace grasp;
 
 bool HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& R){
-		double phi=0;
+
+		bothArm = false;
+
 		VectorXd q_old(nJoints);
 		for(int i=0;i<nJoints;i++){
 				q_old[i] = armStandardPose[i];
 		}
-		return IK_arm( p,  R, phi,  q_old);
+		return IK_arm( p,  R, 0.0,  q_old);
+}
+
+bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& R, const VectorXd& q_old){
+
+		bothArm = false;
+
+		return IK_arm( p,  R, 0.0,  q_old);
 }
 
 bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const VectorXd& q_old){
+
 
 		if(base->name() != "WAIST"){
 				cout << "Set base as WAIST in HIRO.yaml. Exiting.." << endl;
@@ -30,16 +40,10 @@ bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const Ve
 		int n = arm_path->numJoints();
 		Matrix33 R = Rp*arm_path->joint(n-1)->Rs; //R -> attitude()
 
-		Vector3 wristOffset(0,0,0); //Force sensor offset
+		//Vector3 wristOffset(-0.059, 0,0); //Force sensor offset
+		Vector3 wristOffset(0,0,0);
 		if(arm_path->joint(n-1)->name()=="RARM_JOINT5")
 				wristOffset = Vector3(0.05,0,0); //Maybe a bug in IKfast
-
-		//use wrist force sensor
-		/*
-		Vector3 wristOffset(-0.059, 0,0); //Force sensor offset
-		if(arm_path->joint(n-1)->name()=="RARM_JOINT5")
-				wristOffset = Vector3(-0.009,0,0);
-		*/
 
 		Vector3 bp = base->attitude().transpose()*(p - R*wristOffset - base->p);
 		Matrix3 bR = base->attitude().transpose()*R;
@@ -60,7 +64,12 @@ bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const Ve
 				arm_path->joint(0)->q = atan2(bp(1), bp(0)) - asin(0.145/sqrt(bp(0)*bp(0)+bp(1)*bp(1)));
 		}
 
-		if(fabs(phi)>0.0001) arm_path->joint(0)->q = phi;
+		//if(fabs(phi) > 0.0001)
+		if(bothArm)
+				arm_path->joint(0)->q = phi;
+
+
+		bothArm = true;
 
 		if(!ik_handle) cout << "loading error" << endl;
 
@@ -121,6 +130,34 @@ bool  HIRO_Arm::IK_arm(const Vector3& p, const Matrix3& Rp, double phi, const Ve
 
 		return true;
 }
+
+bool HIRO_Arm::getPalmPos(const Vector3& Pco1, const Vector3& Pco2, const Matrix3& Rp, const Vector3& pPcr1, const Matrix3& pRcr1, Vector3& Pp, cnoid::VectorXd& theta)
+{
+		theta.resize(4);
+
+		Vector3 pNcr1 = col(pRcr1, 0);
+		Vector3 pTcr1 = col(pRcr1, 1);
+
+		//Vector3 pPcr2( pPcr1 + 0.046*pNcr1 );
+		Vector3 pPcr2( pPcr1 + 0.03*pNcr1 );
+		
+		double l = 0.0419;
+		double S = dot((Rp*pNcr1), (Rp*(pPcr1-pPcr2) - (Pco1-Pco2)) ) / (2.0*l);
+		double q = asin(S);
+		theta(0) = q;
+		theta(1) = -q;
+		theta(2) = -q;
+		theta(3) = q;
+		
+		Matrix3 R=v3(pNcr1, pTcr1, cross(pNcr1,pTcr1));
+		Vector3 d1(sin(q), 1-cos(q), 0);
+		Pp = Pco1 - Rp*(pPcr1 - l*R*d1);
+
+}
+
+
+
+
 
 extern "C" void* getGrasplotArm(cnoid::BodyPtr body, cnoid::Link *base, cnoid::Link *palm) 
 {                                    
