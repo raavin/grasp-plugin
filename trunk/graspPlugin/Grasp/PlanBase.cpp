@@ -15,8 +15,8 @@
 
 #include <boost/filesystem.hpp>
 
-#include <cnoid/JointPath>	/* modified by qtconv.rb 0th rule*/  
-#include <cnoid/MessageView>	/* modified by qtconv.rb 0th rule*/  
+#include <cnoid/JointPath>	/* modified by qtconv.rb 0th rule*/
+#include <cnoid/MessageView>	/* modified by qtconv.rb 0th rule*/
 
 //#define DEBUG_MODE
 //#define SET_TOLERANCE_MODE
@@ -116,7 +116,7 @@ using namespace grasp;
 
 MotionState PlanBase::getMotionState(double time){
 	MotionState ret;
-	
+
 	ret.jointSeq = VectorXd(body()->numJoints());
 	for(int i=0;i<body()->numJoints();i++)
 		ret.jointSeq[i] = body()->joint(i)->q;
@@ -143,7 +143,7 @@ void PlanBase::setMotionState(MotionState gm){
 	calcForwardKinematics();
 }
 
-PlanBase::PlanBase()  : 	os (MessageView::mainInstance()->cout() ) 
+PlanBase::PlanBase()  : 	os (MessageView::mainInstance()->cout() )
 {
 //	bodyItemRobot = NULL;
 //	bodyItemGRC = NULL;
@@ -184,9 +184,9 @@ TargetObject::TargetObject(cnoid::BodyItemPtr bodyItem){
 
 
 void PlanBase::SetGraspedObject(cnoid::BodyItemPtr bodyItem){
-	
+
 	targetObject = new TargetObject(bodyItem); //shoud be chaged;
-	
+
 	Box& OCP = targetObject->OCP;
 	calcBoundingBox(object()->coldetModel, OCP.edge, OCP.p, targetObject->objCoM_, OCP.R);
 	if(targetArmFinger){
@@ -194,21 +194,27 @@ void PlanBase::SetGraspedObject(cnoid::BodyItemPtr bodyItem){
 		arm()->palmObjPair = new ColdetLinkPair(palm(),object() );
 	}
 	string tagId = bodyItem->name();
-	if(objTag2Item.find(tagId) == objTag2Item.end()){ 
+	if(objTag2Item.find(tagId) == objTag2Item.end()){
 		objTag2Item.insert( pair <string,BodyItemPtr>(tagId, bodyItem) );
 	}
 	setObjectContactState(ON_ENVIRONMENT) ;
-	
+
 }
 
-ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings) :  os (MessageView::mainInstance()->cout() ) 
+ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings) :  os (MessageView::mainInstance()->cout() )
 {
 	bodyItemRobot = bodyItem;
 
-	boost::filesystem::path robotfullpath(bodyItemRobot->modelFilePath());
+#ifdef CNOID_10_11
+	boost::filesystem::path robotfullpath( bodyItemRobot->modelFilePath() );
+#else
+	boost::filesystem::path robotfullpath( bodyItemRobot->lastAccessedFilePath() );
+#endif
+
+	cout << robotfullpath.string() << endl;
 	bodyItemRobotPath = boost::filesystem::path (robotfullpath.branch_path()).string();
 	dataFilePath = bodyItemRobotPath + "/data/";
-	
+
 	//READ YAML setting
 
 	palm = bodyItemRobot->body()->link(gSettings["palm"].toString());
@@ -230,7 +236,7 @@ ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings
 		gPluginManager.scanPluginFiles(pluginPath);
 
 		arm = (Arm *)gPluginManager.loadGrasplotPlugin(bodyItemRobot->body(),base,palm, "Arm");
-		
+
 		for (int i = 0;i < tips.size();i++) {
 			if(!fingers[i]) fingers[i] = (Finger *)gPluginManager.loadGrasplotPlugin
 					(bodyItemRobot->body(), palm, bodyItemRobot->body()->link(tips[i].toString()), "Finger");
@@ -243,19 +249,19 @@ ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings
 		if(!fingers[i]) fingers[i] = new Finger(bodyItemRobot->body(), palm, bodyItemRobot->body()->link(tips[i].toString()) );
 		fingers[i]->number = i;
 	}
-	
-	if( gSettings.find("dataFilePath")->type() == YAML_SCALAR ){ 
+
+	if( gSettings.find("dataFilePath")->type() == YAML_SCALAR ){
 		dataFilePath = bodyItemRobotPath + "/" + gSettings["dataFilePath"].toString() +"/";
 	}
 
-	if( gSettings.find("armStandardPose")->type() == YAML_SEQUENCE ){ 
+	if( gSettings.find("armStandardPose")->type() == YAML_SEQUENCE ){
 		const YamlSequence& list = *gSettings["armStandardPose"].toSequence();
 		for(int i=0;i<list.size();i++){
 			arm->armStandardPose.push_back(list[i].toDouble());
 		}
 	}
 
-	if( gSettings.find("fingerOpenPose")->type() == YAML_SEQUENCE ){ 
+	if( gSettings.find("fingerOpenPose")->type() == YAML_SEQUENCE ){
 		const YamlSequence& list = *gSettings["fingerOpenPose"].toSequence();
 		int j=0;
 		int k=0;
@@ -268,19 +274,19 @@ ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings
 		}
 	}
 
-	if( gSettings.find("pythonInterface")->type() == YAML_SCALAR ){ 
+	if( gSettings.find("pythonInterface")->type() == YAML_SCALAR ){
 		pythonInterface = bodyItemRobotPath + "/" + gSettings["pythonInterface"].toString();
 	}else{
 		pythonInterface = "/NULL";
 	}
-	
+
 	vector <InterLink> & interLinkList = PlanBase::instance()->interLinkList;
-	if( gSettings.find("interlink")->type() == YAML_SEQUENCE ){ 
+	if( gSettings.find("interlink")->type() == YAML_SEQUENCE ){
 		const YamlSequence& list = *gSettings["interlink"].toSequence();
 		for(int i=0;i<list.size();i++){
 			const YamlSequence& ilist = *list[i].toSequence();
-			Link* master = bodyItemRobot->body()->link(ilist[0].toString());			
-			double baseratio = ilist[1].toDouble();			
+			Link* master = bodyItemRobot->body()->link(ilist[0].toString());
+			double baseratio = ilist[1].toDouble();
 			for(int j=1;j<ilist.size()/2;j++){
 				InterLink temp;
 				temp.master = master;
@@ -288,26 +294,40 @@ ArmFingers::ArmFingers(cnoid::BodyItemPtr bodyItem, const YamlMapping& gSettings
 				temp.ratio = ilist[2*j+1].toDouble()/baseratio;
 				interLinkList.push_back(temp);
 			}
-			
+
 		}
 	}
-	if( gSettings.find("approachOffset")->type() == YAML_SEQUENCE ){ 
+	if( gSettings.find("approachOffset")->type() == YAML_SEQUENCE ){
 		const YamlSequence& list = *gSettings["approachOffset"].toSequence();
 		for(int i=0;i<list.size();i++){
 			arm->approachOffset[i] = list[i].toDouble();
 		}
 	}
 
-	if( gSettings.find("selfContactPair")->type() == YAML_SEQUENCE ){ 
+	if( gSettings.find("selfContactPair")->type() == YAML_SEQUENCE ){
 		const YamlSequence& list = *gSettings["selfContactPair"].toSequence();
-		for(int i=0;i<list.size()/2;i++){
-			contactLinks.insert ( make_pair ( list[i*2].toString(), list[i*2+1].toString() ) );
+		if(list[0].type() == YAML_SCALAR){
+			for(int i=0;i<list.size()/2;i++){
+				contactLinks.insert ( make_pair ( list[i*2].toString(), list[i*2+1].toString() ) );
+			}
+		}
+		if(list[0].type() == YAML_SEQUENCE){
+			for(int i=0;i<list.size();i++){
+				const YamlSequence& plist = *list[i].toSequence();
+				for(int j=0;j<plist.size();j++){
+					for(int k=j+1;k<plist.size();k++){
+						contactLinks.insert ( make_pair (plist[j].toString(), plist[k].toString() )  );
+					}
+				}
+			}
+
+
 		}
 	}
 
 	handJoint = new LinkTraverse(palm);
 	nHandLink = handJoint->numLinks();
-	
+
 	if (gSettings.find("name")->type() == YAML_SCALAR ){
 		name = gSettings["name"].toString();
 	}else{
@@ -325,7 +345,7 @@ bool PlanBase::SetGraspingRobot(cnoid::BodyItemPtr bodyItem_){
 	armsList.clear(); //Temoporary;  will delete menbers
 	interLinkList.clear();
 	targetArmFinger = NULL;
-	
+
 	//READ YAML setting
 	if( bodyItem_->body()->info()->find("graspPluginSetting")->type() == YAML_SEQUENCE){ // multi arm
 		const YamlSequence& glist = *(*bodyItem_->body()->info())["graspPluginSetting"].toSequence();
@@ -346,24 +366,24 @@ bool PlanBase::SetGraspingRobot(cnoid::BodyItemPtr bodyItem_){
 	}
 
 	targetArmFinger = armsList[0];
-	
+
 	if(targetArmFinger == NULL){
 		os << "ERROR graspPluginSetting is not found in yaml" << endl;
 		return false;
 	}
-	
-	robTag2Arm.clear();	
+
+	robTag2Arm.clear();
 	for(int i=0;i<armsList.size();i++){
 		armsList[i]->id = i;
 		string tagId = armsList[i]->name;
-		if(robTag2Arm.find(tagId) != robTag2Arm.end()){ 
+		if(robTag2Arm.find(tagId) != robTag2Arm.end()){
 			os << "Error: the tagId is already recorded " << tagId << endl;
 			continue;
 		}else{
 			robTag2Arm.insert( pair <string,ArmFingers*>(tagId, armsList[i]));
 		}
 	}
-	
+
 	os  << bodyItem_->name() << " has " <<armsList.size() << " arm(s) "<< endl;
 
 	if(targetObject){
@@ -372,7 +392,7 @@ bool PlanBase::SetGraspingRobot(cnoid::BodyItemPtr bodyItem_){
 	}
 
 	bodyItemRobot()->body()->calcForwardKinematics();
-	
+
 	graspMotionSeq.clear();
 	setGraspingState(NOT_GRASPING);
 	setGraspingState2(NOT_GRASPING);
@@ -389,7 +409,7 @@ bool PlanBase::flush(){
 		stopFlag=false;
 		throw(cnt);
 	}
-/* it will be GraspController	
+/* it will be GraspController
 	if(bodyItemGRC){
 		bodyItemGRC->body()->link(0)->R = palm()->R*(GRCmax.R);
 		bodyItemGRC->body()->link(0)->p = palm()->p+palm()->R*GRCmax.p;
@@ -397,19 +417,19 @@ bool PlanBase::flush(){
 	}
 */
 //	bodyItemRobot()->body()->calcForwardKinematics();
-	bodyItemRobot()->notifyKinematicStateChange();
-	targetObject->bodyItemObject->notifyKinematicStateChange();
+	if(targetArmFinger) bodyItemRobot()->notifyKinematicStateChange();
+	if(targetObject) targetObject->bodyItemObject->notifyKinematicStateChange();
 	MessageView::mainInstance()->flush();
 
-#ifdef  DEBUG_MODE	
+#ifdef  DEBUG_MODE
 	usleep(100000);
 #endif
 	return true;
-	
+
 }
 
 void PlanBase::calcForwardKinematics(){
-	
+
 	setInterLink();
 
 	bodyItemRobot()->body()->calcForwardKinematics();
@@ -427,9 +447,8 @@ void PlanBase::calcForwardKinematics(){
 bool PlanBase::isColliding(){
 //	cnoid::ColdetLinkPairPtr* robotSelfPairs, robotEnvPairs, robotObjPairs, objEnvPairs;
 	for(int i=0;i<robotSelfPairs.size();i++){
-		ColdetLinkPairPtr testPair = robotSelfPairs[i];
-		testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-		testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+		ColdetLinkPairUpdateCheckPtr testPair = robotSelfPairs[i];
+		testPair->updatePositions();
 		bool coll = testPair->checkCollision();
 		if(coll){
 			colPairName[0] = testPair->model(0)->name();
@@ -441,9 +460,8 @@ bool PlanBase::isColliding(){
 		}
 	}
 	for(int i=0;i<robotEnvPairs.size();i++){
-		ColdetLinkPairPtr testPair = robotEnvPairs[i];
-		testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-		testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+		ColdetLinkPairUpdateCheckPtr testPair = robotEnvPairs[i];
+		testPair->updatePositions();
 		bool coll = testPair->checkCollision();
 		if(coll){
 			colPairName[0] = testPair->model(0)->name();
@@ -456,9 +474,8 @@ bool PlanBase::isColliding(){
 	}
 	if(checkAllGraspingState()==NOT_GRASPING){
 		for(int i=0;i<robotObjPairs.size();i++){
-			ColdetLinkPairPtr testPair = robotObjPairs[i];
-			testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-			testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+			ColdetLinkPairUpdateCheckPtr testPair = robotObjPairs[i];
+			testPair->updatePositions();
 			bool coll = testPair->checkCollision();
 			if(coll){
 				colPairName[0] = testPair->model(0)->name();
@@ -472,9 +489,8 @@ bool PlanBase::isColliding(){
 	}
 	if(getObjectContactState()==OFF_ENVIRONMENT){
 		for(int i=0;i<objEnvPairs.size();i++){
-			ColdetLinkPairPtr testPair = objEnvPairs[i];
-			testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-			testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+			ColdetLinkPairUpdateCheckPtr testPair = objEnvPairs[i];
+			testPair->updatePositions();
 			bool coll = testPair->checkCollision();
 			if(coll){
 #ifdef DEBUG_MODE
@@ -484,20 +500,28 @@ bool PlanBase::isColliding(){
 			}
 		}
 	}
-	
+
+	return false;
+}
+
+bool PlanBase::isCollidingPointCloud(const vector<Vector3>& p){
+
+	for(int i=0; bodyItemRobot()->body()->numLinks(); i++)
+			if(bodyItemRobot()->body()->link(0)->coldetModel->checkCollisionWithPointCloud(p, 0.001))
+					return true;
+
 	return false;
 }
 
 double PlanBase::clearance(){
 
 //	double start = getrusage_sec();
-	
+
 	double min_sep=1.e10;
 
 	for(int i=0;i<robotSelfPairs.size();i++){
-		ColdetLinkPairPtr testPair = robotSelfPairs[i];
-		testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-		testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+		ColdetLinkPairUpdateCheckPtr testPair = robotSelfPairs[i];
+		testPair->updatePositions();
 		bool coll = testPair->checkCollision();
 		if(coll){
 			colPairName[0] = testPair->model(0)->name();
@@ -510,9 +534,8 @@ double PlanBase::clearance(){
 	}
 	if(checkAllGraspingState()==NOT_GRASPING){
 		for(int i=0;i<robotObjPairs.size();i++){
-			ColdetLinkPairPtr testPair = robotObjPairs[i];
-			testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-			testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+			ColdetLinkPairUpdateCheckPtr testPair = robotObjPairs[i];
+			testPair->updatePositions();
 			bool coll = testPair->checkCollision();
 			if(coll){
 				colPairName[0] = testPair->model(0)->name();
@@ -525,11 +548,10 @@ double PlanBase::clearance(){
 		}
 	}
 
-	
+
 	for(int i=0;i<robotEnvPairs.size();i++){
-		ColdetLinkPairPtr testPair = robotEnvPairs[i];
-		testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-		testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+		ColdetLinkPairUpdateCheckPtr testPair = robotEnvPairs[i];
+		testPair->updatePositions();
 
 		testPair->setTolerance(tolerance);
 		if( testPair->detectIntersection() ){
@@ -560,9 +582,8 @@ double PlanBase::clearance(){
 
 	if(getObjectContactState()==OFF_ENVIRONMENT){
 		for(int i=0;i<objEnvPairs.size();i++){
-			ColdetLinkPairPtr testPair = objEnvPairs[i];
-			testPair->model(0)->setPosition(testPair->link(0)->R, testPair->link(0)->p);
-			testPair->model(1)->setPosition(testPair->link(1)->R, testPair->link(1)->p);
+			ColdetLinkPairUpdateCheckPtr testPair = objEnvPairs[i];
+			testPair->updatePositions();
 
 			testPair->setTolerance(tolerance);
 			if( testPair->detectIntersection() ){
@@ -593,29 +614,29 @@ double PlanBase::clearance(){
 //	double end = getrusage_sec();
 //	cout << "time clearance" << objEnvPairs.size() << " "<< end - start << endl;
 
-	
+
 	return min_sep;
 }
-	
+
 
 void PlanBase::setGraspingState(int state){
 	if(state==GRASPING){
-		targetArmFinger->objectPalmPos = trans(palm()->R)*(object()->p - palm()->p);	
-		targetArmFinger->objectPalmRot = trans(palm()->R)*object()->R ;	
+		targetArmFinger->objectPalmPos = trans(palm()->R)*(object()->p - palm()->p);
+		targetArmFinger->objectPalmRot = trans(palm()->R)*object()->R ;
 	}
 	graspingState = state;
 }
 
 void PlanBase::setGraspingState2(int state){
 	if(armsList.size() >1 && state==GRASPING){
-		armsList[1]->objectPalmPos = trans(palm(1)->R)*(object()->p - palm(1)->p);	
-		armsList[1]->objectPalmRot = trans(palm(1)->R)*object()->R ;	
+		armsList[1]->objectPalmPos = trans(palm(1)->R)*(object()->p - palm(1)->p);
+		armsList[1]->objectPalmRot = trans(palm(1)->R)*object()->R ;
 	}
 	graspingState2 = state;
 }
 
 void PlanBase::setTrajectoryPlanDOF(){
-	
+
 	pathPlanDOF.clear();
 
 	for(int i=0; i<arm()->nJoints; i++)
@@ -632,7 +653,7 @@ void PlanBase::setTrajectoryPlanDOF(){
 }
 
 void PlanBase::setTrajectoryPlanDOF(int k){
-	
+
 	pathPlanDOF.clear();
 
 	for(int i=0; i<arm(k)->nJoints; i++)
@@ -686,11 +707,11 @@ double PlanBase::calcContactPoint(ColdetLinkPairPtr cPair, Vector3 &Po, Vector3 
 	Pf = Vector3(p1[0], p1[1], p1[2]);
 	Po = Vector3(p2[0], p2[1], p2[2]);
 //	cout << Po << Pf << endl;
-	
+
 	Po = trans(cPair->link(1)->R) * Po - cPair->link(1)->p;
 //	alias(Pf) = trans(cPair->link(0)->R) * Pf - cPair->link(0)->p;
 
-	
+
 	Vector3 objN2 = cross(Vector3(n[1] - n[0]), Vector3(n[2] - n[0]));
 	objN = objN2 / norm2(objN2);
 
@@ -733,13 +754,13 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 	// convert coldetmodel to objectshape
 	float out_x, out_y, out_z;
 	int v0,v1,v2;
-	
+
 	int nVerticies = model->getNumVertices();
 	int nTriangles = model->getNumTriangles();
-	
+
 	Vector3* verticies = new Vector3[nVerticies];
 	Triangle* triangles = new Triangle[nTriangles];
-	
+
 	for(int i=0;i<nVerticies;i++){
         model->getVertex(i, out_x, out_y, out_z);
 		verticies[i][0] = out_x;
@@ -753,12 +774,12 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 		triangles[i].ver[1] = verticies[v1];
 		triangles[i].ver[2] = verticies[v2];
 	}
-	
+
 	// calc distribution
 	Vector3 pt;
 	MatrixXd distribute = MatrixXd::Zero(3, 3);
 	Vector3 average(0, 0, 0);
-	
+
 	for(int i=0;i<nTriangles;i++){
 		Vector3 e1 (triangles[i].ver[1] - triangles[i].ver[0]);
 		Vector3 e2 (triangles[i].ver[2] - triangles[i].ver[0]);
@@ -802,7 +823,6 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			e[j][i] = Rot(i, j);
-	
 
 	Vector3 pt_max(0, 0, 0), pt_min(0, 0, 0);
 
@@ -815,16 +835,18 @@ void PlanBase::calcBoundingBox(ColdetModelPtr model, Vector3 &edge, Vector3& cen
 		}
 	}
 
+	//Rot =  (d2v(evec));
+
 	edge =  (pt_max - pt_min);
 	center =  average + 0.5 * (pt_max + pt_min);
 //	com = average;
-	
+
 //	alias(Rot)  = objVisRot() * Rot;
 //	alias(center) = objVisRot() * center + objVisPos();
 //	alias(com)    = objVisRot() * com   + objVisPos();
-	cout << edge << Rot ;
-	
-	
+	cout << edge.transpose() << Rot ;
+
+
 	delete []	verticies;
 	delete []  triangles;
 
@@ -842,16 +864,16 @@ bool PlanBase::initial() {
 		os << "Please select Grasped Object and Grasping Robot" << endl;
 		return false;
 	}
-	
+
 	RemoveEnvironment(targetObject->bodyItemObject);
-	
+
 	targetObject->objVisPos = object()->p;
 	targetObject->objVisRot = object()->R;
 
 	setGraspingState(NOT_GRASPING);
 	setGraspingState2(NOT_GRASPING);
 	graspMotionSeq.push_back ( getMotionState() );
-	
+
 	initialCollision();
 
 	_initrand();
@@ -873,45 +895,43 @@ void PlanBase::initialCollision(){
 			robotSelfPairs.push_back(new ColdetLinkPair(arm()->arm_path->joint(i), arm()->arm_path->joint(j)) );
 		}
 	}
-	
+
 */
-	for(unsigned int i=0;i<bodyItemRobot()->body()->numJoints();i++){ // If initial position is not collided, it is stored as 
-		for(unsigned int j=i+2;j<bodyItemRobot()->body()->numJoints();j++){
+	for(unsigned int i=0;i<bodyItemRobot()->body()->numLinks();i++){ // If initial position is not collided, it is stored as
+		for(unsigned int j=i+1;j<bodyItemRobot()->body()->numLinks();j++){
 			bool pass = false;
 			pair<multimap<string, string>::iterator, multimap<string, string>::iterator> ppp;
-			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->joint(i)->name() );
+			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(i)->name() );
 			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
-				if(it2->second == bodyItemRobot()->body()->joint(j)->name()) pass = true;
+				if(it2->second == bodyItemRobot()->body()->link(j)->name()) pass = true;
 			}
-			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->joint(j)->name() );
+			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(j)->name() );
 			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
-				if(it2->second == bodyItemRobot()->body()->joint(i)->name()) pass = true;
+				if(it2->second == bodyItemRobot()->body()->link(i)->name()) pass = true;
 			}
 			if(pass) continue;
-			ColdetLinkPairPtr temp= new ColdetLinkPair(bodyItemRobot()->body()->joint(i),bodyItemRobot()->body()->joint(j));
-			temp->model(0)->setPosition(temp->link(0)->R, temp->link(0)->p);
-			temp->model(1)->setPosition(temp->link(1)->R, temp->link(1)->p);
+			ColdetLinkPairUpdateCheckPtr temp= new ColdetLinkPairUpdateCheck(bodyItemRobot()->body()->link(i),bodyItemRobot()->body()->link(j));
+			temp->updatePositions();
 			int t1,t2;
 			double p1[3],p2[3];
 			double distance = temp->computeDistance(t1,p1,t2,p2);
 			if(distance>1.0e-04)	robotSelfPairs.push_back(temp);
 #ifdef DEBUG_MODE
-			else os <<"collide on initial condition at robotSelfPair"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl; 
+			else os <<"collide on initial condition at robotSelfPair"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl;
 #endif
 		}
 	}
-	for(unsigned int j=0;j<bodyItemRobot()->body()->numJoints();j++){
+	for(unsigned int j=0;j<bodyItemRobot()->body()->numLinks();j++){
 		for( list<BodyItemPtr>::iterator it = bodyItemEnv.begin(); it !=bodyItemEnv.end(); it++){
 			for(unsigned int i=0;i<(*it)->body()->numLinks();i++){
-				ColdetLinkPairPtr temp= new ColdetLinkPair(bodyItemRobot()->body()->joint(j), (*it)->body()->link(i));
-				temp->model(0)->setPosition(temp->link(0)->R, temp->link(0)->p);
-				temp->model(1)->setPosition(temp->link(1)->R, temp->link(1)->p);
+				ColdetLinkPairUpdateCheckPtr temp= new ColdetLinkPairUpdateCheck(bodyItemRobot()->body()->link(j), (*it)->body()->link(i));
+				temp->updatePositions();
 				int t1,t2;
 				double p1[3],p2[3];
 				double distance = temp->computeDistance(t1,p1,t2,p2);
 				if(distance>1.0e-04)	robotEnvPairs.push_back(temp);
 #ifdef DEBUG_MODE
-				else os <<"collide on initial condition robot and env"  <<distance <<" "<< temp->model(0)->name() <<" " << (*it)->body()->name() << endl; 
+				else os <<"collide on initial condition robot and env"  <<distance <<" "<< temp->model(0)->name() <<" " << (*it)->body()->name() << endl;
 #endif
 			}
 		}
@@ -926,18 +946,18 @@ void PlanBase::initialCollision(){
 			double distance = temp->computeDistance(t1,p1,t2,p2);
 			if(distance>1.0e-03)	armEnvPairs.push_back(temp);
 #ifdef DEBUG_MODE
-			else os <<"tollerance collide on initial condition"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl; 
+			else os <<"tollerance collide on initial condition"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl;
 #endif
-			os <<"tollerance collide on initial condition"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl; 
+			os <<"tollerance collide on initial condition"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl;
 		}
 	}
 */	if(targetObject){
-		for(unsigned int j=0;j<bodyItemRobot()->body()->numJoints();j++){
-			robotObjPairs.push_back(new ColdetLinkPair(bodyItemRobot()->body()->joint(j), object() ));
+		for(unsigned int j=0;j<bodyItemRobot()->body()->numLinks();j++){
+			robotObjPairs.push_back(new ColdetLinkPairUpdateCheck(bodyItemRobot()->body()->link(j), object() ));
 	  	}
 		for(list<cnoid::BodyItemPtr>::iterator it = bodyItemEnv.begin(); it !=bodyItemEnv.end();it++){
 			for(unsigned int i=0;i<(*it)->body()->numLinks();i++){
-				objEnvPairs.push_back(new ColdetLinkPair(object(), (*it)->body()->link(i)));
+				objEnvPairs.push_back(new ColdetLinkPairUpdateCheck(object(), (*it)->body()->link(i)));
 			}
 		}
 	}
@@ -999,7 +1019,7 @@ void PlanBase::setInterLink(){
 	if(interLinkList.empty()) return;
 	for(int i=0; i<interLinkList.size();i++){
 		interLinkList[i].slave->q = interLinkList[i].master->q *interLinkList[i].ratio;
-		if( interLinkList[i].slave->q < interLinkList[i].slave->llimit) interLinkList[i].slave->q = interLinkList[i].slave->llimit; 
-		if( interLinkList[i].slave->q > interLinkList[i].slave->ulimit) interLinkList[i].slave->q = interLinkList[i].slave->ulimit; 
+		if( interLinkList[i].slave->q < interLinkList[i].slave->llimit) interLinkList[i].slave->q = interLinkList[i].slave->llimit;
+		if( interLinkList[i].slave->q > interLinkList[i].slave->ulimit) interLinkList[i].slave->q = interLinkList[i].slave->ulimit;
 	}
 }

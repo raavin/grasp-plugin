@@ -20,11 +20,80 @@ using namespace boost;
 using namespace cnoid;
 using namespace grasp;
 
+
+
+SaveGraspPlatternDialog::SaveGraspPlatternDialog() : QDialog(cnoid::MainWindow::instance()) {
+	
+	setWindowTitle("Save grasp pattern");
+	
+	QVBoxLayout* vbox = new QVBoxLayout();
+	setLayout(vbox);
+	
+	QHBoxLayout* hbox = new QHBoxLayout();
+	hbox->addWidget(new QLabel("Rotational direction [x: 0, y: 1, z: 2]: "));
+	rotationDirection.setAlignment(Qt::AlignCenter);
+	rotationDirection.setRange(0, 2);
+	rotationDirection.setValue(0);
+	hbox->addWidget(&rotationDirection);
+	hbox->addStretch();
+	vbox->addLayout(hbox);
+	
+	hbox = new QHBoxLayout();
+	hbox->addWidget(new QLabel("Rotational angle [0-180]: "));
+	rotationAngle.setAlignment(Qt::AlignCenter);
+	rotationAngle.setRange(0, 180);
+	rotationAngle.setValue(0);
+	hbox->addWidget(&rotationAngle);
+	hbox->addStretch();
+	vbox->addLayout(hbox);
+	
+	hbox = new QHBoxLayout();
+	hbox->addWidget(new QLabel("Translational direction [x: 0, y: 1, z: 2]: " ));
+	translationDirection.setAlignment(Qt::AlignCenter);
+	translationDirection.setRange(0, 2);
+	translationDirection.setValue(0);
+	hbox->addWidget(&translationDirection);
+	hbox->addStretch();
+	vbox->addLayout(hbox);
+	
+	hbox = new QHBoxLayout();
+	hbox->addWidget(new QLabel( "Translation length:" ));
+	translationLength.setAlignment(Qt::AlignCenter);
+	translationLength.setRange(0, 1.0);
+	translationLength.setSingleStep(0.01);
+	translationLength.setValue(0);
+	hbox->addWidget(&translationLength);
+	hbox->addStretch();
+	vbox->addLayout(hbox);
+	
+	rotationYaxis = new QCheckBox("Rotate about y axis for 180[deg]? [y: check]");
+	vbox->addWidget(rotationYaxis);
+	
+	vbox->addStretch();
+	
+	cnoid::PushButton* okButton = new cnoid::PushButton("&OK");
+	okButton->setDefault(true);
+	connect(okButton, SIGNAL(clicked()), this, SLOT(accept()));
+	okButton->sigClicked().connect(boost::bind(&SaveGraspPlatternDialog::okClicked, this));
+	
+	vbox->addWidget(okButton);
+}
+	
+
+void SaveGraspPlatternDialog::okClicked(){
+	rotationDirection;
+	GraspController::instance()->
+		saveGraspPattern(rotationDirection.value(), rotationAngle.value(), translationDirection.value(), translationLength.value(), rotationYaxis->isChecked());
+}
+
+
 GraspBar* GraspBar::instance()
 {
 	static GraspBar* instance = new GraspBar();
 	return instance;
 }
+
+
 
 GraspBar::GraspBar()
 	: ToolBar("GraspBar"),
@@ -65,8 +134,9 @@ GraspBar::GraspBar()
 	addSeparator();
 
 	addButton(("SaveGraspPattern"), ("Save grasp pattern"))->
-		sigClicked().connect(bind(&GraspBar::onSaveGPButtonClicked, this));	/* modified by qtconv.rb 6th rule*/  
-		
+		sigClicked().connect(bind(&QDialog::show, &saveGraspPattern));
+		//sigClicked().connect(bind(&GraspBar::onSaveGPButtonClicked, this));
+
 	addButton(("SelectGraspPattern"), ("Load selected grasp pattern"))->
 		sigClicked().connect(bind(&GraspBar::onSelectGraspPattern, this));	/* modified by qtconv.rb 6th rule*/  
 		
@@ -271,6 +341,11 @@ void GraspBar::onSaveGPButtonClicked(){
 }
 
 void GraspBar::onSelectGraspPattern(){
+	bool init = PlanBase::instance()->initial();
+	if(!init){
+		os << "Failed: Grasp Planning Initial" << endl;
+		return;
+	}
 	GraspController::instance()->loadAndSelectGraspPattern();
 }
 
@@ -309,7 +384,8 @@ bool GraspBar::storeState(Archive& archive)
 			qs.append(archive.getItemId(it->second), 10, i);
 			it++;
 		}
-	}		
+	}	
+	
 	return true;
 }
 
@@ -338,11 +414,13 @@ bool GraspBar::restoreState(const Archive& archive)
 		gc->objTag2Item.clear();
 		for(int i=0; i < qs2.size(); ++i){
 			BodyItemPtr bodyItem = archive.findItem<BodyItem>(qs2[i].toInt());
-			string tagId = bodyItem->name();
+			string tagId;
+			if(bodyItem != NULL)
+				tagId = bodyItem->name();
 			gc->objTag2Item.insert( pair <string,BodyItemPtr>(tagId, bodyItem) );
 		}
 	}
-	
+
 	const YamlSequence& qs3 = *archive.findSequence("GraspPlanning");
 	if(qs3.isValid()){
 		bool init = PlanBase::instance()->initial();

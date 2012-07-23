@@ -6,9 +6,7 @@
 #include <fstream>
 #include <string>
 #include <iostream>
-
 #include <math.h>
-
 #include <algorithm>
 #include <time.h>
 #include <sys/resource.h>
@@ -18,8 +16,6 @@
 #include <cnoid/JointPath>
 #include <cnoid/MessageView>
 
-#define DEBUG_MODE
-
 #include "GraspController.h"
 #include "readtext.h"
 #include "VectorMath.h"
@@ -27,27 +23,24 @@
 
 #include "GraspPluginManager.h"
 
-
+#define DEBUG_MODE
 #define deg2Rad(x)   ((x)*(3.141596)/(180.0))
 #define m_pi    (3.141596)
-
 
 using namespace std;
 using namespace cnoid;
 using namespace grasp;
 
-
-
-GraspController::GraspController()  : 	os (MessageView::mainInstance()->cout() ) 
+GraspController::GraspController()  : 	os (MessageView::mainInstance()->cout() )
 {
 	bodyItemGRC = NULL;
-	targetObject = NULL;
-	targetArmFinger=NULL;
+	//targetObject = NULL;
+	//targetArmFinger=NULL;
 	refSize = refCsSize = 0;
+	tc = NULL;
 }
 
 GraspController::~GraspController() {
-
 }
 
 GraspController* GraspController::instance(GraspController *gc) {
@@ -55,7 +48,6 @@ GraspController* GraspController::instance(GraspController *gc) {
 	if(gc) instance = gc;
 	return instance;
 }
-
 
 double GraspController::calcContactPoint(ColdetLinkPairPtr cPair, Vector3 &Po, Vector3 &Pf, Vector3 &objN) {
 
@@ -93,16 +85,14 @@ double GraspController::calcContactPoint(ColdetLinkPairPtr cPair, Vector3 &Po, V
 
 	Pf = Vector3(p1[0], p1[1], p1[2]);
 	Po = Vector3(p2[0], p2[1], p2[2]);
-	
+
 	Po = trans(cPair->link(1)->R) * Po - cPair->link(1)->p;
-	
+
 	Vector3 objN2 = cross(Vector3(n[1] - n[0]), Vector3(n[2] - n[0]));
 	objN = objN2 / norm2(objN2);
 
 	return dsn;
-
 }
-
 
 //Including Enveloping grasp
 //bool GraspController::sampleFinalPos2(mpkRobotCollection* robots, vector<mpkCollPair> *test_pairs, int iterate)
@@ -111,14 +101,14 @@ bool GraspController::sampleFinalPos(int iterate) {
 	Homogenous Palm;
 	Palm.p = palmPos;
 	Palm.R = palmRot;
-	
+
 	vector <Vector3* > link_org_p(nFing());
 	vector <Matrix3*> link_org_R(nFing());
 	vector <double* > link_org_q(nFing());
 
-	arm()->IK_arm(Palm.p, Palm.R);
+	tc->arm()->IK_arm(Palm.p, Palm.R);
 	bodyItemRobot()->body()->calcForwardKinematics();
-	
+
 
 	for (int i = 0; i < nFing(); i++) {
 		link_org_p[i] = new Vector3[ fingers(i)->nJoints ];
@@ -130,10 +120,10 @@ bool GraspController::sampleFinalPos(int iterate) {
 			link_org_q[i][j] = fingers(i)->fing_path->joint(j)->q;
 		}
 	}
-	
+
 	int nContact=0;
-	
-	if(arm()->palmContact) nContact++;	
+
+	if(tc->arm()->palmContact) nContact++;
 	for(int i=0;i<nFing();i++) for(int j=0;j<fingers(i)->nJoints;j++) if(fingers(i)->contact[j]) nContact++;
 
 	vector <Vector3> objPos(nContact), objN(nContact);
@@ -145,7 +135,7 @@ bool GraspController::sampleFinalPos(int iterate) {
 		Vector3 dPos((_drand() - 0.5)*dif(0), 0.8*(_drand() - 0.5)*dif(1), (_drand() - 0.5)*dif(2) );
 		if(!times) dPos = Vector3(0,0,0);
 
-		ik_solved = arm()->IK_arm(Vector3(Palm.p + Palm.R * GRCmax.R * dPos), Palm.R);
+		ik_solved = tc->arm()->IK_arm(Vector3(Palm.p + Palm.R * GRCmax.R * dPos), Palm.R);
 		if(!ik_solved) continue;
 
 		for(int i=0;i<nFing();i++){
@@ -153,22 +143,22 @@ bool GraspController::sampleFinalPos(int iterate) {
 				fingers(i)->fing_path->joint(j)->q = link_org_q[i][j] ;
 			}
 		}
-		
+
 		bodyItemRobot()->body()->calcForwardKinematics();
 
 		int cnt=0;
-		if(arm()->palmContact){
-			if( arm()->closeArm(0,1000,objPos[cnt], objN[cnt]) ){
+		if(tc->arm()->palmContact){
+			if( tc->arm()->closeArm(0,1000,objPos[cnt], objN[cnt]) ){
 				cnt++;
 			}
 			else continue;
 		}
-		
+
 		for(int i=0;i<nFing();i++){
 			fingers(i)->contactSearch(cnt, 1000, &objPos[0], &objN[0]);
 			tc->flush() ;
-		}		
-		
+		}
+
 		if(cnt < nContact) continue;
 
 		VectorXd wrench = VectorXd::Zero(6);
@@ -176,15 +166,15 @@ bool GraspController::sampleFinalPos(int iterate) {
 
 		double Qtmp, q_threshold = 0.01;
 		Qtmp = ForceClosureTest::instance()->forceClosureTestEllipsoid(wrench, &objPos[0], &objN[0],nContact, 0.5, 5.0);
-		
+
 		cout <<"force closure" << Qtmp << endl;
-		
+
 		if(cnt < 3 || nContact<3){	Qtmp=1; cout<<  "ForceClosureTest>0 for gripper" << endl; };
 
 		if (Qtmp > q_threshold) {
 			palmPos = palm()->p;
 			palmRot = Palm.R;
-			arm()->IK_arm(palmPos, palmRot);
+			tc->arm()->IK_arm(palmPos, palmRot);
 			bodyItemRobot()->body()->calcForwardKinematics();
 			return true;
 		}
@@ -192,11 +182,6 @@ bool GraspController::sampleFinalPos(int iterate) {
 
 	return false;
 }
-
-
-
-
-
 
 
 void GraspController::readMotionFile(const char argv[]) {
@@ -221,28 +206,26 @@ double GraspController::returnRefMotion(bool cs, string refMotion_) {
 	//1. getObjShape should be run
 	//2. objMass should be defined
 
-	Vector3 oE = sort(targetObject->OCP_edge());
+	Vector3 oE = sort(tc->targetObject->OCP_edge());
 	bool flag = false;
 
 	string refMotion_selected = "";
 
 	string prm_data = tc->dataFilePath() + refMotion_ + ".prm";
-	
+
 	ifstream fin_prm(prm_data.c_str());
 
-#ifdef DEBUG_MODE	
+#ifdef DEBUG_MODE
 	cout << prm_data << endl;
 #endif
-	
-	parseParameters(fin_prm);
-	
 
+	parseParameters(fin_prm);
 
 	Vector3 hBE( sort(GRCmax.edge) );
 	Vector3 hDE( sort(GRCdes.edge) );
 
 	if (cs) {
-		GRCmax.edge[2] = GRCmax.edge[2]*1.5; 
+		GRCmax.edge[2] = GRCmax.edge[2]*1.5;
 		double crx0 = sqrt( dbl(hBE[0]) + dbl(hBE[1]) ), crx1=hBE[2];
 		hBE = Vector3(crx0, crx0, crx1);
 	}
@@ -252,14 +235,13 @@ double GraspController::returnRefMotion(bool cs, string refMotion_) {
 
 	refMotion_selected = refMotion_;
 
-	if ( (targetObject->objMass < maxLoad)  && (sb > 0.0) && (targetObject->objMass > minLoad) ) {
+	if ( (tc->targetObject->objMass < maxLoad)  && (sb > 0.0) && (tc->targetObject->objMass > minLoad) ) {
 		flag = true;
 		cout << refMotion_selected << " is candidate " << endl;
 	}
 	if(!flag) return -1;
 	return sd ;
 }
-
 
 Matrix3 GraspController::calcObjRot(const Matrix3 &a, int n) {
 	Matrix3 ret;
@@ -307,13 +289,13 @@ double GraspController::getPalmPosture() {
 	// selectRefMotion should be run.
 	//Box& OCP = targetObject->OCP;
 	Box OCP;
-	OCP.R = targetObject->OCP_R();
-	OCP.edge = targetObject->OCP_edge();
-	OCP.p = targetObject->OCP_p();
+	OCP.R = tc->targetObject->OCP_R();
+	OCP.edge = tc->targetObject->OCP_edge();
+	OCP.p = tc->targetObject->OCP_p();
 
 	double eval = 1.e10;
 
-#ifdef DEBUG_MODE	
+#ifdef DEBUG_MODE
 	ofstream fout_log("palmPos.log");
 	fout_log << "OCP_Pos" << OCP.p.transpose() << endl;
 	fout_log << "OCP_Rot" << rpyFromRot(OCP.R).transpose() << endl;
@@ -350,32 +332,32 @@ double GraspController::getPalmPosture() {
 				Vector3 ap(Palm.R*GRCmax.R*ey);
 				Palm.p = OCP.p + Palm.R * dGRC_Pos_ + 0.5*(GRCmax.edge(1) - fabs(d0(1)))*ap - Palm.R * GRCmax.p;
 			}
-			
-#ifdef DEBUG_MODE	
+
+#ifdef DEBUG_MODE
 			palm()->p = Palm.p;
 			palm()->R = Palm.R;
 //			tc->flush();
 //			os << d0 << GRCmax.edge  << endl;
 #endif
-	
+
 			if( fabs(d0[2])>GRCmax.edge[2] ) continue;
 			if( fabs(d0[1])>GRCmax.edge[1] ) continue;
 			if( fabs(d0[0])>GRCmax.edge[0] ) continue;
 			if( fabs(d0[0])<GRCmin.edge[0] ) continue;
-	
-			bool ikConv = arm()->IK_arm(Palm.p, Palm.R);
-			double leng = norm2(Palm.p - arm()->arm_path->joint(0)->p);
-			double quality = arm()->avoidAngleLimit();
-			bool limit =  arm()->checkArmLimit();
 
-#ifdef DEBUG_MODE	
+			bool ikConv = tc->arm()->IK_arm(Palm.p, Palm.R);
+			double leng = norm2(Palm.p - tc->arm()->arm_path->joint(0)->p);
+			double quality = tc->arm()->avoidAngleLimit();
+			bool limit =  tc->arm()->checkArmLimit();
+
+#ifdef DEBUG_MODE
 			fout_log << endl;
 			fout_log << leng <<" "<< (eval>quality) <<" "<< quality <<" "<< ikConv <<" "<< limit <<" "<< !tc->isColliding() << endl;
 			fout_log << "OCPface" << rpyFromRot(OCPface_.R).transpose() << endl;
 			fout_log << "GRCface" << rpyFromRot(GRCface.R).transpose() << endl;
 			fout_log << "palmPos" << Palm.p.transpose() << endl;
 			fout_log << "palmRot" << rpyFromRot(Palm.R).transpose() << endl;
-			for (int k = 0; k < arm()->arm_path->numJoints(); k++) fout_log << arm()->arm_path->joint(k)->q << " "; fout_log << endl;
+			for (int k = 0; k < tc->arm()->arm_path->numJoints(); k++) fout_log << tc->arm()->arm_path->joint(k)->q << " "; fout_log << endl;
 			if(tc->isColliding())fout_log << "Collision " << tc->colPairName[0] << " " << tc->colPairName[1] << endl;
 #endif
 
@@ -387,19 +369,18 @@ double GraspController::getPalmPosture() {
 				eval = quality;
 				os << "Found feasible palm posture " << endl;
 
-#ifdef DEBUG_MODE	
+#ifdef DEBUG_MODE
 				fout_log <<  "Found feasible palm posture " << endl;
 #endif
 			}
 		}
 	}
-	
+
 	dif = Vector3 ( fabs( (trans(Matrix3(palmRot*GRCmax.R))*OCP.R*OCP.edge)[0] ) - GRCdes.edge[0],
 	        fabs( dot(Vector3(0, 0, 1), trans(OCPface.R)*OCP.R*OCP.edge) ),
 	        -fabs( (trans(Matrix3(palmRot*GRCmax.R))*OCP.R*OCP.edge)[2] ) + fabs( GRCmax.edge[2]) );
-	
 
-#ifdef DEBUG_MODE	
+#ifdef DEBUG_MODE
 	fout_log.close();
 #endif
 
@@ -412,15 +393,15 @@ bool GraspController::initial(TargetObject* targetObject, ArmFingers* targetArmF
 		os << "Please select Grasped Object and Grasping Robot" << endl;
 		return false;
 	}
-	this->targetObject = targetObject;
-	this->targetArmFinger = targetArmFinger;
-	
+//	this->targetObject = targetObject;
+//	this->targetArmFinger = targetArmFinger;
+
 	tc = PlanBase::instance();
 	tc->RemoveEnvironment(targetObject->bodyItemObject);
-	
+
 	targetObject->objVisPos = object()->p;
 	targetObject->objVisRot = object()->R;
-	
+
 	tc->initialCollision();
 
 	//READ YAML setting
@@ -431,24 +412,24 @@ bool GraspController::initial(TargetObject* targetObject, ArmFingers* targetArmF
 	else{
 		gSettings  = bodyItemRobot()->body()->info()->findMapping("graspPluginSetting");
 	}
-	
+
 	if (gSettings->isValid() && !gSettings->empty()) {
 		refSize =0;
-		if( gSettings->find("prehensionList")->type() == YAML_SEQUENCE ){ 
+		if( gSettings->find("prehensionList")->type() == YAML_SEQUENCE ){
 			const YamlSequence& plist = *(*gSettings)["prehensionList"].toSequence();
 			refSize = plist.size();
 			if(refSize) reffile = new string[refSize];
 			for (int i = 0;i < refSize; i++) {
-				reffile[i] = plist[i].toString(); 
+				reffile[i] = plist[i].toString();
 			}
 		}
 		refCsSize = 0;
-		if( gSettings->find("prehensionCsList")->type() == YAML_SEQUENCE ){ 
+		if( gSettings->find("prehensionCsList")->type() == YAML_SEQUENCE ){
 			const YamlSequence& pcslist = *(*gSettings)["prehensionCsList"].toSequence();
 			refCsSize = pcslist.size();
 			if(refCsSize) refCsfile = new string[refCsSize];
 			for (int i = 0;i < refCsSize; i++) {
-				refCsfile[i] = pcslist[i].toString(); 
+				refCsfile[i] = pcslist[i].toString();
 			}
 		}
 	}else {
@@ -457,47 +438,47 @@ bool GraspController::initial(TargetObject* targetObject, ArmFingers* targetArmF
 		targetArmFinger=NULL;
 		return false;
 	}
-	
-	
+
+
 	bodyItemGRC = new cnoid::BodyItem();
 	if( bodyItemGRC->loadModelFile(tc->dataFilePath() + "grcTemplateHrp.wrl") ){
 		bodyItemGRC->setName("GRC");
-		bodyItemRobot()->addSubItem(bodyItemGRC);	/* modified by qtconv.rb 4th rule*/  
+		bodyItemRobot()->addSubItem(bodyItemGRC);	/* modified by qtconv.rb 4th rule*/
 	}
 	else{
 		bodyItemGRC = NULL;
 	}
-	
+
 	for(int i=0;i<nFing();i++) fingers(i)->coldetLinkPair(targetObject->bodyItemObject);
-	arm()->palmObjPair = new ColdetLinkPair(palm(),object() );
+	tc->arm()->palmObjPair = new ColdetLinkPair(palm(),object() );
 	bodyItemRobot()->body()->calcForwardKinematics();
-	
+
 	_initrand();
 	return true;
 }
 
-
-
 bool GraspController::doGraspPlanning() {
 	
-	if ( !targetObject || !targetArmFinger) {
+	if(tc == NULL){
+		os << "implmentation error: you have to call initial()" << endl;
+	}
+
+	if ( !tc->targetObject || !tc->targetArmFinger) {
 		os << "Please select Grasped Object and Grasping Robot" << endl;
 		return false;
 	}
-	
+	tc = PlanBase::instance();
+	tc->setGraspingState(PlanBase::UNDER_GRASPING);
 	
 	int motionN = -1;
 	double eval = 1.e10;
 	double quality;
 	double priority=-1;//reference priority for selecting would be implmented
-	
+
 	double grcQuality=0;
 	for (int i = 0;i < refSize;i++) {
-	cout << "test3c" << endl;
 		if ( (grcQuality=returnRefMotion(false, reffile[i])) >=0) {
-	cout << "test3a" << endl;
 			if ( (quality = getPalmPosture()) < (1.e10 - 1.0)) {
-	cout << "test3b" << endl;
 //				if (grcQuality*quality < eval || motionN / 3 < i / 3) {
 				if (grcQuality*quality < eval ) {
 					eval = quality;
@@ -507,7 +488,6 @@ bool GraspController::doGraspPlanning() {
 		}
 	}
 
-	cout << "test3" << endl;
 	if (motionN < 0) {
 		for (int i = 0;i < refCsSize;i++) {
 			if (returnRefMotion(true, refCsfile[i])) {
@@ -528,28 +508,23 @@ bool GraspController::doGraspPlanning() {
 		returnRefMotion(false, reffile[motionN]);
 		os << reffile[motionN] <<" "<< motionN <<" is selected" << endl;
 	}
-	cout << "test4" << endl;
 
-	if (motionN < 0) { 
+	if (motionN < 0) {
 		os << "cannot find palm position" << endl;
 		//readMotionFile(refMotion.c_str());
 		//bodyItemRobot()->body()->calcForwardKinematics();
 		return false ;
 	}
 
-	cout << "test5" << endl;
 	getPalmPosture();
-	
 
-	cout << "test6" << endl;
-	arm()->IK_arm(palmPos, palmRot);
+	tc->arm()->IK_arm(palmPos, palmRot);
 	bodyItemRobot()->body()->calcForwardKinematics();
 	palmPos = palm()->p;
 	palmRot = palm()->R;
 
 	readMotionFile(refMotion.c_str());
-	
-	cout << "test2" << endl;
+
 
 //	initialPlan();
 
@@ -562,40 +537,36 @@ bool GraspController::doGraspPlanning() {
 		os << "Fail: Grasp Plannng" << endl;
 		return false;
 	}
-	
+
 	return true;
-	
 }
 
-
 void GraspController::saveGraspPattern(){
-	
+
 	tc = PlanBase::instance();
-	
+
 	if ( !tc->targetObject || !tc->targetArmFinger) {
 		os << "Please select Grasped Object and Grasping Robot" << endl;
 		return;
 	}
-	cout << "test" << endl;
 	initial( tc->targetObject, tc->targetArmFinger);
 	//this->targetObject = tc->targetObject;
 	//this->targetArmFinger = tc->targetArmFinger;
-	
+
 	  os << endl;
 	  os << "CAUTION:  Please use this command after grasp planning command." << endl;
 	  os << endl;
-	
-	cout << "test" << endl;
-	
-		targetObject->objVisPos = object()->p;
-		targetObject->objVisRot = object()->R;
-	
+
+
+		tc->targetObject->objVisPos = object()->p;
+		tc->targetObject->objVisRot = object()->R;
+
 		palmPos = palm()->p;
 		palmRot = palm()->R;
-	
-	  
-	  string pfile = tc->dataFilePath() + "preplanning_" + targetObject->bodyItemObject->name() + ".txt";
-	  
+
+
+	  string pfile = tc->dataFilePath() + "preplanning_" + tc->targetObject->bodyItemObject->name() + ".txt";
+
 	  ofstream fout( pfile.c_str(), std::ios::app);
 
 	  while(1){
@@ -606,16 +577,17 @@ void GraspController::saveGraspPattern(){
 
 	  Vector3 e(0.0, 0.0, 0.0);
 	  e(i)=1.0;
-	  
+
 	  cout << "Rotational angle [0-180]: " << endl;
 	  cout << endl;
 	  double angleStep;
 	  cin >> angleStep;
 	  angleStep *= 3.1415/180.0;
-	
+
 	  if(angleStep==0) angleStep=10000;
 
 
+	
 	  cout << "Translational direction [x: 0, y: 1, z: 2]: " << endl;
 	  cout << endl;
 	  cin >> i;
@@ -629,55 +601,56 @@ void GraspController::saveGraspPattern(){
 	  cin >> tran;
 
 	  t = tran*t;
+	  
 
 	  cout << "Rotate about y axis for 180[deg]? [y/n]" << endl;
 	  string yr;
 	  cin >> yr;
+	  
 
 	  bool y_rot=false;
 	  if(yr == "Y" || yr == "y")
 		  y_rot = true;
 
 
-	  for(double angle=0.0; angle<2*3.1415; angle+=angleStep){
-
-		  Matrix3 rot = rodrigues(e, angle);
-
-		  int iter=1;
-		  if(y_rot)
-		  iter=2;
-		  
-		  for(int f=0; f<iter; f++){
-		  if(f==1)
-			  rot = rodrigues(Vector3(0,1,0), 3.141592)*rot;
-
-		  Vector3  tmpPos ((objVisPos()-t) + rot*(palmPos - (objVisPos()-t)));
-		  Matrix3 tmpRot (rot*palmRot);
-
-		  Vector3  oPp (trans(objVisRot())*(tmpPos - (objVisPos()-t)));
-		  Matrix3 oRp (trans(objVisRot())*tmpRot);
-		  
-		  fout << 1.0 << " ";
-		  
-		  for(int i=0;i<3;i++){
-			  for(int j=0;j<3;j++){
-			  fout << oRp(i,j) << " ";
-			  }
-		  }
-	
-		  for(int i=0;i<3;i++){
-			  fout << oPp(i) << " ";
-		  }
-
-		  for (int i = 1;i < nHandLink();i++){
-			  fout <<  handJoint()->link(i)->q <<" ";
-		  }
-		  
-		  fout << endl;
+	for(double angle=0.0; angle<2*3.1415; angle+=angleStep){
+		
+		Matrix3 rot = rodrigues(e, angle);
+		
+		int iter=1;
+		if(y_rot)
+		iter=2;
+		
+		for(int f=0; f<iter; f++){
+			if(f==1) rot = rodrigues(Vector3(0,1,0), 3.141592)*rot;
+			
+			Vector3  tmpPos ((tc->objVisPos()-t) + rot*(palmPos - (tc->objVisPos()-t)));
+			Matrix3 tmpRot (rot*palmRot);
+			
+			Vector3  oPp (trans(tc->objVisRot())*(tmpPos - (tc->objVisPos()-t)));
+			Matrix3 oRp (trans(tc->objVisRot())*tmpRot);
+			
+			fout << 1.0 << " ";
+			
+			for(int i=0;i<3;i++){
+				for(int j=0;j<3;j++){
+				fout << oRp(i,j) << " ";
+				}
+			}
+			
+			for(int i=0;i<3;i++){
+				fout << oPp(i) << " ";
+			}
+			
+			for (int i = 1;i < nHandLink();i++){
+				fout <<  handJoint()->link(i)->q <<" ";
+			}
+			
+			fout << endl;
 		}
 
 	  }
-	  
+
 	  cout << " Continue? [y/n]" << endl;
 	  string cnt;
 	  cin >> cnt;
@@ -689,6 +662,88 @@ void GraspController::saveGraspPattern(){
 }
 
 
+void GraspController::saveGraspPattern(int rotDir, double angleStep, int transDir, double transLeng, bool y_rot){
+
+	tc = PlanBase::instance();
+
+	if ( !tc->targetObject || !tc->targetArmFinger) {
+		os << "Please select Grasped Object and Grasping Robot" << endl;
+		return;
+	}
+	initial( tc->targetObject, tc->targetArmFinger);
+
+	  os << endl;
+	  os << "CAUTION:  Please use this command after grasp planning command." << endl;
+	  os << endl;
+
+
+	tc->targetObject->objVisPos = object()->p;
+	tc->targetObject->objVisRot = object()->R;
+
+	palmPos = palm()->p;
+	palmRot = palm()->R;
+
+
+	  string pfile = tc->dataFilePath() + "preplanning_" + tc->targetObject->bodyItemObject->name() + ".txt";
+
+	  ofstream fout( pfile.c_str(), std::ios::app);
+
+	  Vector3 e(0.0, 0.0, 0.0);
+	  e(rotDir)=1.0;
+
+	  angleStep *= 3.1415/180.0;
+
+	  if(angleStep==0) angleStep=10000;
+
+
+	
+	  Vector3 t(0.0, 0.0, 0.0);
+	  t(transDir)=1.0;
+
+	  t = transLeng*t;
+	  
+
+
+
+	for(double angle=0.0; angle<2*3.1415; angle+=angleStep){
+		
+		Matrix3 rot = rodrigues(e, angle);
+		
+		int iter=1;
+		if(y_rot)
+		iter=2;
+		
+		for(int f=0; f<iter; f++){
+			if(f==1) rot = rodrigues(Vector3(0,1,0), 3.141592)*rot;
+			
+			Vector3  tmpPos ((tc->objVisPos()-t) + rot*(palmPos - (tc->objVisPos()-t)));
+			Matrix3 tmpRot (rot*palmRot);
+			
+			Vector3  oPp (trans(tc->objVisRot())*(tmpPos - (tc->objVisPos()-t)));
+			Matrix3 oRp (trans(tc->objVisRot())*tmpRot);
+			
+			fout << 1.0 << " ";
+			
+			for(int i=0;i<3;i++){
+				for(int j=0;j<3;j++){
+				fout << oRp(i,j) << " ";
+				}
+			}
+			
+			for(int i=0;i<3;i++){
+				fout << oPp(i) << " ";
+			}
+			
+			for (int i = 1;i < nHandLink();i++){
+				fout <<  handJoint()->link(i)->q <<" ";
+			}
+			
+			fout << endl;
+		}
+
+	  }
+}
+
 
 // load parameter part of *.prm file
 void GraspController ::parseParameters( istream &fp ) {
@@ -698,13 +753,13 @@ void GraspController ::parseParameters( istream &fp ) {
 	int k;
 	const string fingerAlias[5] = {"Thumb_", "Index_", "Middle_", "Ring_", "Little_"};
 	dGRC_Pos_ << 0,0,0;
-	
+
 	GetString(fp, buf);
 	// skip the first [START] or [BEGIN]
 	if (strcmp(buf, "[START]") != 0 && strcmp(buf, "[BEGIN]") != 0 ) {
 		BackString(fp, buf);
 		return;
-	} 
+	}
 
 	vector <string> nameFinger(nFing());
 	for (int i = 0;i < nFing();i++) {
@@ -712,7 +767,7 @@ void GraspController ::parseParameters( istream &fp ) {
 		temp << "Finger" << i;
 		nameFinger[i]   =  (temp).str();
 	}
-	arm()->palmContact=false;
+	tc->arm()->palmContact=false;
 
 	while ( GetString(fp, buf) ) {
 
@@ -744,116 +799,99 @@ void GraspController ::parseParameters( istream &fp ) {
 		}
 
 		if (strcmp(buf, "[END]") == 0) {
+
 			SkipToEOL(fp);
 			break;
 		}
 		else if (strcmp(buf, "palmCloseDir") == 0) {
-			arm()->palmContact =true;
+
+			tc->arm()->palmContact =true;
 			int k=0;
-			while ( GetLineDouble(fp, arm()->closeDir[k]) ) k++; 
+			while ( GetLineDouble(fp, tc->arm()->closeDir[k]) ) k++;
 		}
 		else if (strcmp(buf, "Reference_Motion") == 0) {
 
 			GetString(fp, buf);
 			refMotion = (string)buf;
-
-
 		}
 		else if (strcmp(buf, "GRCdes_Position") == 0) { //not used parameter
 
 			k = 0;
 			while ( GetLineDouble(fp, GRCdes.p[k]) )
 				k++;
-
-
-		} else if (strcmp(buf, "GRCdes_Rpy") == 0) { //not used parameter
+		}
+		else if (strcmp(buf, "GRCdes_Rpy") == 0) { //not used parameter
 
 			k = 0;
 			while ( GetLineDouble(fp, w[k]) )
 				k++;
 
 			GRCdes.R = rotFromRpy(w);
-
-
-		} else if (strcmp(buf, "GRCdes_Edges") == 0) {
+		}
+		else if (strcmp(buf, "GRCdes_Edges") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, GRCdes.edge[k]) )
 				k++;
-
-
 		}
-
 		else if (strcmp(buf, "GRCmin_Position") == 0) { //not used parameter
 
 			k = 0;
-			while ( GetLineDouble(fp, GRCmin.p[k]) ) 
+			while ( GetLineDouble(fp, GRCmin.p[k]) )
 				k++;
-
-
-		} else if (strcmp(buf, "GRCmin_Rpy") == 0) { //not used parameter
+		}
+		else if (strcmp(buf, "GRCmin_Rpy") == 0) { //not used parameter
 
 			k = 0;
 			while ( GetLineDouble(fp, w[k]) )
 				k++;
 
 			GRCmin.R = rotFromRpy(w);
-
-
-		} else if (strcmp(buf, "GRCmin_Edges") == 0) {
+		}
+		else if (strcmp(buf, "GRCmin_Edges") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, GRCmin.edge[k]) )
 				k++;
-
-
 		}
-
 		else if (strcmp(buf, "GRCmax_Position") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, GRCmax.p[k]) )
 				k++;
-
-
-		} else if (strcmp(buf, "GRCmax_Rpy") == 0) {
+		}
+		else if (strcmp(buf, "GRCmax_Rpy") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, w[k]) )
 				k++;
 
 			GRCmax.R = rotFromRpy(w);
-
-
-		} else if (strcmp(buf, "GRCmax_Edges") == 0) {
+		}
+		else if (strcmp(buf, "GRCmax_Edges") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, GRCmax.edge[k]) )
 				k++;
-
-
-		} else if (strcmp(buf, "Max_Load") == 0) {
+		}
+		else if (strcmp(buf, "Max_Load") == 0) {
 
 			GetDouble(fp, maxLoad);
-
-		} else if (strcmp(buf, "Min_Load") == 0) {
+		}
+		else if (strcmp(buf, "Min_Load") == 0) {
 
 			GetDouble(fp, minLoad);
-
 		}
-
 		else if (strcmp(buf, "Approach_Vector") == 0) {
 
 			GetDouble(fp, v);
 			appVector = (int)v;
-
-		} else if (strcmp(buf, "GRC_Pos_Deviation") == 0) {
+		}
+		else if (strcmp(buf, "GRC_Pos_Deviation") == 0) {
 
 			k = 0;
 			while ( GetLineDouble(fp, dGRC_Pos_[k]) )
 				k++;
-
-
 		}
 	}
 	return;
@@ -861,27 +899,25 @@ void GraspController ::parseParameters( istream &fp ) {
 
 
 void GraspController::doDisplayGRCPosition(){
-	
+
 	if(bodyItemGRC){
 		Matrix3 gR = bodyItemGRC->body()->link(0)->R; //= palm()->R*(GRCmax.R);
 		Vector3 gP = bodyItemGRC->body()->link(0)->p; //= palm()->p+palm()->R*GRCmax_Pos_;
-		
+
 		os << "rpy"<< rpyFromRot( Matrix3(trans(palm()->R) * gR)) << endl;
 		os << "pos"<<Vector3(trans(palm()->R)* (gP-palm()->p) )<< endl;
-	
-		
 	}
-	
+
 }
 
 void GraspController::closeFingers(){
-	
+
 	returnRefMotion(false, reffile[0]); //use the fisrt prehension
 	bodyItemRobot()->body()->calcForwardKinematics();
 	palmPos = palm()->p;
 	palmRot = palm()->R;
 	readMotionFile(refMotion.c_str());
-	
+
 	int cnt=0;
 	int nContact=0;
 	for(int i=0;i<nFing();i++) for(int j=0;j<fingers(i)->nJoints;j++) if(fingers(i)->contact[j]) nContact++;
@@ -892,9 +928,7 @@ void GraspController::closeFingers(){
 		fingers(i)->fing_path->calcForwardKinematics();
 		os << fingers(i)->fing_path->joint(0)->q << endl;
 		tc->flush() ;
-	}		
-	
-	
+	}
 }
 
 bool GraspController::loadAndSelectGraspPattern() {
@@ -905,7 +939,6 @@ bool GraspController::loadAndSelectGraspPattern() {
 		return false;
 	}
 
-	
 	double Eval = 1.e10;
 	bool found = false;
 
@@ -924,7 +957,7 @@ bool GraspController::loadAndSelectGraspPattern() {
 	Vector3 palmPos (0, 0, 0);
 	Matrix3 palmRot;
 	palmRot << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-	
+
 //	string pos_data   =   pb->bodyItemRobotPath() + "/data/preplanning_" + pb->targetObject->bodyItemObject->body()->name() + ".txt";
 	string pos_data;
 	if(pb->targetObject->preplanningFileName.length() )   pos_data   =   pb->dataFilePath() + pb->targetObject->preplanningFileName;
@@ -936,9 +969,8 @@ bool GraspController::loadAndSelectGraspPattern() {
 
 	vector <double> fpos(dim);
 	vector<double> tfpos(dim);
-	
-	pb->setGraspingState(PlanBase::UNDER_GRASPING);
 
+	pb->setGraspingState(PlanBase::UNDER_GRASPING);
 
 	while (fin_pos) {
 
@@ -968,19 +1000,26 @@ bool GraspController::loadAndSelectGraspPattern() {
 
 		bool ikConv = pb->arm()->IK_arm(tmpPos, tmpRot);
 
-
-//		double  leng = norm2(tmpPos - arm()->arm_path->joint(0)->p);
-		double quality = fabs(pb->arm()->arm_path->joint(4)->q) + fabs(pb->arm()->arm_path->joint(5)->q) + fabs(pb->arm()->arm_path->joint(6)->q) ;
+//		double  leng = norm2(tmpPos - pb->arm()->arm_path->joint(0)->p);
+//		double quality = fabs(pb->arm()->arm_path->joint(4)->q) + fabs(pb->arm()->arm_path->joint(5)->q) + fabs(pb->arm()->arm_path->joint(6)->q) ;
 
 		double dist = 0.0;
-		double standard[9] = {0,0,0,-0.5,0,1.57,0,0,0};
-		for (int i = 0; i < pb->arm()->arm_path->numJoints(); i++){
-			double edist =  (pb->arm()->arm_path->joint(i)->q - pb->arm()->armStandardPose[i]); // * 6.28 / (arm_path->joint(i)->ulimit - arm_path->joint(i)->llimit);
-			dist +=  edist*edist;
+//		double standard[9] = {0,0,0,-0.5,0,1.57,0,0,0};
+		
+		if(pb->arm()->armStandardPose.size() == pb->body()->numJoints()){
+			for(int i=0;i<pb->body()->numJoints();i++){
+				double edist =  (pb->body()->joint(i)->q - pb->arm()->armStandardPose[i]); // * 6.28 / (arm_path->joint(i)->ulimit - arm_path->joint(i)->llimit);
+				dist +=  edist*edist;
+			}
+		}
+		else{
+			for (int i = 0; i < pb->arm()->arm_path->numJoints(); i++){
+				double edist =  (pb->arm()->arm_path->joint(i)->q - pb->arm()->armStandardPose[i]); // * 6.28 / (arm_path->joint(i)->ulimit - arm_path->joint(i)->llimit);
+				dist +=  edist*edist;
+			}
 		}
 		//for smartpal , will be fixed
-		quality = dist;
-
+		double quality = dist;
 
 		if (  (Eval > quality) && ikConv && pb->arm()->checkArmLimit() && !pb->isColliding() ) {
 
@@ -1002,7 +1041,6 @@ bool GraspController::loadAndSelectGraspPattern() {
 		}
 	}
 
-
 	if (found) {
 		pb->arm()->IK_arm(palmPos, palmRot);
 		for (int k = 1;k < pb->nHandLink();k++) pb->handJoint()->link(k)->q = fpos[k-1];
@@ -1022,5 +1060,4 @@ bool GraspController::loadAndSelectGraspPattern() {
 	cout << "time " << end - start << endl;
 
 	return found;
-
 }

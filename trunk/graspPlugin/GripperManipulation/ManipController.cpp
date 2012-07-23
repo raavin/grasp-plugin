@@ -7,7 +7,6 @@
 
 #define m_pi 3.141592
 //#define DEBUG_MODE
-//#define CALIB_MODE
 //#define PUT_PATTERN
 //#define OBJ_ENV_CONTACT
 
@@ -34,8 +33,6 @@ ManipController* ManipController::instance() {
 
 bool ManipController::initial(TargetObject* targetObject, ArmFingers* targetArmFinger)
 {
-		rb = new RobotLocalFunctions();
-		cp = new CollisionPair();
 		pf = new ParameterFileData();
 
 		if( grasp::GraspController::initial(targetObject, targetArmFinger) == false) return false;
@@ -127,7 +124,9 @@ void ManipController::chooseArmToGrasp()
 
 void ManipController::chooseArmToPut()
 {
-		Vector3 P = bodyItemRobot()->body()->link(0)->attitude().transpose()*(Po_put[0] - bodyItemRobot()->body()->link(0)->p);
+		Vector3 P = Vector3::Zero();
+		if(Po_put.size()>0)
+				P = bodyItemRobot()->body()->link(0)->attitude().transpose()*(Po_put[0] - bodyItemRobot()->body()->link(0)->p);
 
 		if(tc->arm(1)==NULL || P(1) <0){
 				arm_p = tc->arm(0);
@@ -289,10 +288,10 @@ bool ManipController::searchPickAndPlaceMotion(Vector3& Pp_grasp2, Matrix3& Rp_g
 								VectorXd th_grasp(fingers_g[0]->fing_path->numJoints() + fingers_g[1]->fing_path->numJoints());
 								VectorXd th_put(fingers_g[0]->fing_path->numJoints() + fingers_g[1]->fing_path->numJoints());
 
-								rb->calcPalmFingParam(robot, Pco1, Pco2, Rp_grasp, pPcr1, pNcr1, pTcr1, Pp_grasp, th_grasp);
+								arm_g->getPalmPos(Pco1, Pco2, Rp_grasp, pPcr1, pRcr1, Pp_grasp, th_grasp);
 
 								//if( ! arm_p->IK_arm(Pp_p,     arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_p),  0.01) ) continue;
-								if( ! arm_g->IK_arm(Pp_grasp, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp),  0.0) ){
+								if( ! arm_g->IK_arm(Pp_grasp, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp)) ){
 #ifdef DEBUG_MODE
 										cout << "IK(grasping posture) not solvable" << endl;
 #endif
@@ -329,9 +328,8 @@ bool ManipController::searchPickAndPlaceMotion(Vector3& Pp_grasp2, Matrix3& Rp_g
 												Pco1 = Po_des[env] + Ro_des[env]*oPco1;
 												Pco2 = Po_des[env] + Ro_des[env]*oPco2;
 
-												rb->calcPalmFingParam(robot, Pco1, Pco2, Rp_put, pPcr1, pNcr1, pTcr1, Pp_put, th_put);
-
-												if( ! arm_p->IK_arm(Pp_put,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_put),  0.0) ) continue;
+												arm_p->getPalmPos(Pco1, Pco2, Rp_put, pPcr1, pRcr1, Pp_put, th_put);
+												if( ! arm_p->IK_arm(Pp_put,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_put)) ) continue;
 
 												//k=0;
 												//for(int i=0; i<2; i++)
@@ -374,7 +372,7 @@ bool ManipController::searchPickAndPlaceMotion(Vector3& Pp_grasp2, Matrix3& Rp_g
 		}
 
 		if(ret){
-				arm_g->IK_arm(Pp_grasp2, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp2), 0.0);
+				arm_g->IK_arm(Pp_grasp2, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp2));
 
 				int k=0;
 				for(int i=0; i<2; i++)
@@ -510,20 +508,20 @@ bool ManipController::searchPickAndPlaceWithRegrasp(Vector3& Pp_grasp2, Matrix3&
 												VectorXd th_grasp(nJ), th_tmp1(nJ), th_tmp2(nJ), th_put(nJ);
 
 												Vector3 Pp_tmp_put, Pp_regrasp;
-												rb->calcPalmFingParam(robot, Pco1, Pco2, Rp_grasp, pPcr1, pNcr1, pTcr1, Pp_grasp, th_grasp);
-												rb->calcPalmFingParam(robot, Pco3, Pco4, Rp_regrasp,  pPcr1, pNcr1, pTcr1, Pp_regrasp,  th_tmp2);
+												arm_g->getPalmPos(Pco1, Pco2, Rp_grasp, pPcr1, pRcr1, Pp_grasp, th_grasp);
+												arm_p->getPalmPos(Pco3, Pco4, Rp_regrasp,  pPcr1, pRcr1, Pp_regrasp,  th_tmp2);
 
 												Pco1 = Po_tmp[0] + Ro_tmp[0]*oPco1;
 												Pco2 = Po_tmp[0] + Ro_tmp[0]*oPco2;
 
-												rb->calcPalmFingParam(robot, Pco1, Pco2, Rp_tmp_put, pPcr1, pNcr1, pTcr1, Pp_tmp_put, th_tmp1);
+												arm_g->getPalmPos(Pco1, Pco2, Rp_tmp_put, pPcr1, pRcr1, Pp_tmp_put, th_tmp1);
 
 												//double nom = 1.0-dot(Vector3(Rp_tmp_put(0,0), Rp_tmp_put(1,0), Rp_tmp_put(2,0) ), Vector3(Rp_regrasp(0,0), Rp_regrasp(1,0), Rp_regrasp(2,0) ) );
 												//double Quality = nom; //pf->gainParameter[0]*((c0+1) + (c1+1) + id0 + id1) + pf->gainParameter[0]*((c2+1) + (c3+1) + id2 + id3);
 												//if( Quality > Quality_o || ret) continue;
 
 												bool cond = true;
-												if(! arm_g->IK_arm(Pp_grasp,  arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp), 0.0) ) cond = false;
+												if(! arm_g->IK_arm(Pp_grasp,  arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_grasp)) ) cond = false;
 												if(! arm_p->IK_arm(Pp_ini[1], arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_ini[1]), arm_g->arm_path->joint(0)->q) ) cond = false;
 												if(!cond){
 #ifdef DEBUG_MODE
@@ -543,8 +541,8 @@ bool ManipController::searchPickAndPlaceWithRegrasp(Vector3& Pp_grasp2, Matrix3&
 #endif
 														continue;}
 
-												if( ! arm_g->IK_arm(Pp_tmp_put,  arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_tmp_put),  0.001) ) cond = false;
-												if( ! arm_p->IK_arm(Pp_regrasp,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_regrasp),  0.001) ) cond = false;
+												if( ! arm_g->IK_arm(Pp_tmp_put,  arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_tmp_put),  0.0) ) cond = false;
+												if( ! arm_p->IK_arm(Pp_regrasp,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_regrasp),  0.0) ) cond = false;
 												if(!cond){
 #ifdef DEBUG_MODE
 														cout << "IK (regrasping posture) not solvable" << endl;
@@ -575,9 +573,9 @@ bool ManipController::searchPickAndPlaceWithRegrasp(Vector3& Pp_grasp2, Matrix3&
 														Pco3 = Po_des[env] + Ro_des[env]*oPco3;
 														Pco4 = Po_des[env] + Ro_des[env]*oPco4;
 
-														rb->calcPalmFingParam(robot, Pco3, Pco4, Rp_put,  pPcr1, pNcr1, pTcr1, Pp_put,  th_put);
+														arm_p->getPalmPos(Pco3, Pco4, Rp_put,  pPcr1, pRcr1, Pp_put,  th_put);
 
-														if( ! arm_p->IK_arm(Pp_put,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_put),  0.0) ) continue;
+														if( ! arm_p->IK_arm(Pp_put,  arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_put)) ) continue;
 														if( ! arm_g->IK_arm(Pp_tmp_put,  arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_tmp_put), arm_p->arm_path->joint(0)->q) ) continue;
 
 														if(!isColliding(PlanBase::GRASPING, PlanBase::NOT_GRASPING)){
@@ -623,7 +621,7 @@ bool ManipController::searchPickAndPlaceWithRegrasp(Vector3& Pp_grasp2, Matrix3&
 		}
 
 		if(ret){
-				arm_g->IK_arm(Pp_tmp_put2, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_tmp_put2), 0.0);
+				arm_g->IK_arm(Pp_tmp_put2, arm_g->arm_path->joint(nj)->calcRfromAttitude(Rp_tmp_put2));
 				arm_p->IK_arm(Pp_regrasp2, arm_p->arm_path->joint(nj)->calcRfromAttitude(Rp_regrasp2), arm_g->arm_path->joint(0)->q);
 
 				int k=0;
@@ -726,7 +724,7 @@ bool ManipController::setMotionSeq(int graspingState, int contactState, const Ve
 
 		calcArmJointSeq(armJointSeq, arm_);
 
-		if(!arm_->IK_arm(P,  R, 0.0, armJointSeq)) return false;
+		if(!arm_->IK_arm(P,  R, armJointSeq)) return false;
 
 		setJointSeq(graspingState, jointSeq, arm_, fingers_);
 		tc->jointSeq.push_back(jointSeq);
@@ -750,8 +748,8 @@ bool ManipController::setMotionSeqDual(int graspingState, int graspingState2, in
 		if(fingers[0] == fingers_g[0]) for(int i=0; i<2; i++) fingers2[i] = fingers_p[i];
 		else                           for(int i=0; i<2; i++) fingers2[i] = fingers_g[i];
 
-		if(!arm->IK_arm(P,  R, 0.0)) return false;
-		if(!arm2->IK_arm(P2,  R2, arm->arm_path->joint(0)->q)) return false;
+		if(!arm->IK_arm(P, R)) return false;
+		if(!arm2->IK_arm(P2, R2, arm->arm_path->joint(0)->q)) return false;
 
 		setJointSeq(graspingState, jointSeq, arm, fingers);
 		setJointSeq(graspingState2, jointSeq, arm2, fingers2);
@@ -778,7 +776,7 @@ bool ManipController::calcJointSeqTest(Vector3& Pp_grasp, Matrix3& Rp_grasp, Vec
 		for(int i=0; i<2; i++){
 				for(int j=0; j<fingers_g[i]->fing_path->numJoints(); j++)
 						fingers_g[i]->fingerGraspPose[j] = fingers_g[i]->joint(j)->q;
-		}  
+		}
 
 		int nj = arm_g->arm_path->numJoints()-1;
 
@@ -867,7 +865,7 @@ bool ManipController::calcJointSeqTest(Vector3& Pp_grasp, Matrix3& Rp_grasp, Vec
 				return false;}
 
 		//== Release point
-		if(!setMotionSeq(PlanBase::GRASPING,     PlanBase::OFF_ENVIRONMENT, Pp_put, Att_put, jointSeq, arm_g, fingers_g, mtime[1])) cond = false;
+		if(!setMotionSeq(PlanBase::GRASPING,     PlanBase::ON_ENVIRONMENT, Pp_put, Att_put, jointSeq, arm_g, fingers_g, mtime[1])) cond = false;
 		if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_put, Att_put, jointSeq, arm_g, fingers_g, mtime[2])) cond = false;
 		if(isColliding(PlanBase::NOT_GRASPING, PlanBase::NOT_GRASPING)) cond = false;
 		if(!cond){
@@ -886,9 +884,9 @@ bool ManipController::calcJointSeqTest(Vector3& Pp_grasp, Matrix3& Rp_grasp, Vec
 
 		//==Just for Graphics
 		tc->setGraspingState(PlanBase::NOT_GRASPING);
-		arm_g->IK_arm(Pp_grasp, Att_grasp, 0.0);
+		arm_g->IK_arm(Pp_grasp, Att_grasp);
 		bodyItemRobot()->body()->calcForwardKinematics();
-		
+
 
 		bool limit = true;
 		if(robot==PA10)
@@ -915,7 +913,7 @@ bool ManipController::calcJointSeqTestRegrasp(Vector3& Pp_grasp, Matrix3& Rp_gra
 						fingers_g[i]->fingerGraspPose[j] = fingers_g[i]->joint(j)->q;
 						fingers_g[i]->fingerGraspPose[j] = fingers_g[i]->joint(j)->q;
 				}
-		}  
+		}
 
 		int nj = arm_g->arm_path->numJoints()-1;
 
@@ -1034,7 +1032,7 @@ bool ManipController::calcJointSeqTestRegrasp(Vector3& Pp_grasp, Matrix3& Rp_gra
 
 		//==Just for Graphics
 		tc->setGraspingState(PlanBase::NOT_GRASPING);
-		arm_p->IK_arm(Pp_put, Att_put2, 0.0);
+		arm_p->IK_arm(Pp_put, Att_put2);
 		bodyItemRobot()->body()->calcForwardKinematics();
 
 		return cond;
@@ -1052,8 +1050,8 @@ bool ManipController::movePallet()
 		Vector3 tPr(0.0,  0.15, 0.015);
 		Vector3 tPl(0.0, -0.15, 0.015);
 
-		Vector3 Pt = targetObject->bodyItemObject->body()->link(0)->p;
-		Matrix3 Rt = targetObject->bodyItemObject->body()->link(0)->attitude();
+		Vector3 Pt = tc->targetObject->bodyItemObject->body()->link(0)->p;
+		Matrix3 Rt = tc->targetObject->bodyItemObject->body()->link(0)->attitude();
 
 		Vector3 pPcr1 = pf->handClusters[0].controlPoints[0];
 		Vector3 pNcr1 = pf->handClusters[0].normal;
@@ -1079,6 +1077,8 @@ bool ManipController::movePallet()
 		Vector3 Ppr, Ppl;
 		Matrix3 Rpr=arm_g->arm_path->joint(nj)->calcRfromAttitude(rotFromRpy(0.0, -1.5708, -M_PI/4.0));
 		Matrix3 Rpl=arm_p->arm_path->joint(nj)->calcRfromAttitude(rotFromRpy(0.0, -1.5708, -M_PI/4.0));
+		//Matrix3 Rpr=rotFromRpy(0.0, -1.5708, -0.28-M_PI/4.0);
+		//Matrix3 Rpl=rotFromRpy(0.0, -1.5708,  0.28-M_PI/4.0);
 
 		VectorXd jointSeq(bodyItemRobot()->body()->numJoints());
 		VectorXd jointSeq_ini(bodyItemRobot()->body()->numJoints());
@@ -1115,8 +1115,8 @@ bool ManipController::movePallet()
 				Pl = P1;
 		}
 
-		rb->calcPalmFingParam(robot, Pr, Pr, Rpr,  pPcr1, pNcr1, pTcr1, Ppr,  theta);
-		rb->calcPalmFingParam(robot, Pl, Pl, Rpl,  pPcr1, pNcr1, pTcr1, Ppl,  theta2);
+		tc->arm(0)->getPalmPos(Pr, Pr, Rpr,  pPcr1, pRcr1, Ppr,  theta);
+		tc->arm(1)->getPalmPos(Pl, Pl, Rpl,  pPcr1, pRcr1, Ppl,  theta2);
 
 		for(int i=0; i<2; i++)
 				for(int j=0; j<2; j++){
@@ -1134,8 +1134,8 @@ bool ManipController::movePallet()
 		Pr -= app_length*z;
 		Pl -= app_length*z;
 
-		rb->calcPalmFingParam(robot, Pr, Pr, Rpr,  pPcr1, pNcr1, pTcr1, Ppr,  theta);
-		rb->calcPalmFingParam(robot, Pl, Pl, Rpl,  pPcr1, pNcr1, pTcr1, Ppl,  theta2);
+		tc->arm(0)->getPalmPos(Pr, Pr, Rpr,  pPcr1, pRcr1, Ppr,  theta);
+		tc->arm(1)->getPalmPos(Pl, Pl, Rpl,  pPcr1, pRcr1, Ppl,  theta2);
 
 		if(!setMotionSeqDual(PlanBase::UNDER_GRASPING, PlanBase::UNDER_GRASPING, PlanBase::ON_ENVIRONMENT, Ppr, Rpr, Ppl, Rpl, jointSeq, arm_g, fingers_g, mtime[1]))  return false;
 
@@ -1215,8 +1215,6 @@ bool ManipController::movePallet()
 		//---------
 		bodyItemRobot()->body()->calcForwardKinematics();
 
-		rb->writeFile(robot, tc->jointSeq, tc->motionTimeSeq);
-
 		return true;
 }
 
@@ -1240,8 +1238,8 @@ bool ManipController::pushBox()
 		for(unsigned int i=0; i<pf->motionTime.size(); i++)
 				mtime.push_back(pf->motionTime[i]);
 
-		Vector3 Po = targetObject->bodyItemObject->body()->link(0)->p;
-		Matrix3 Ro = upright(targetObject->bodyItemObject->body()->link(0)->attitude());
+		Vector3 Po = tc->targetObject->bodyItemObject->body()->link(0)->p;
+		Matrix3 Ro = upright(tc->targetObject->bodyItemObject->body()->link(0)->attitude());
 
 		vector<Vector3> pPcr, pNcr, pTcr;
 		vector<Matrix3> pRcr;
@@ -1297,7 +1295,7 @@ bool ManipController::pushBox()
 
 
 				for(int i=0; i<2; i++){
-						
+
 						calculated = true;
 						calculated2 = true;
 
@@ -1306,14 +1304,14 @@ bool ManipController::pushBox()
 						Rp_ = arm_g->arm_path->joint(nj)->calcRfromAttitude(rodrigues(Ro*oTco, m_pi)*Ro*oRco*trans(pRcr[i]));
 
 						//==== Approach Point
-						rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+						tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 						if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated = false;
 
 						if(calculated){
 								//==== Ready to push
 								Pco  -= app_length*z;
 
-								rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+								tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 								if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 
 								//==== Pushing
@@ -1322,14 +1320,14 @@ bool ManipController::pushBox()
 										oPmargin << -0.11/3.0, 0,0; //with Offset
 										Pco  += Ro*oPmargin*op;
 
-										rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+										tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 										if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 				}
 
 								//==== Hand go up
 								Pco  += app_length*z - 1.3*Ro*oPmargin*op;
 
-								rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+								tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 								if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 						}
 
@@ -1367,7 +1365,7 @@ bool ManipController::pushBox()
 			Rp_ = arm_g->arm_path->joint(nj)->calcRfromAttitude(rodrigues(Ro*oTco, m_pi)*Ro*oRco*trans(pRcr[i]));
 
 			//==== Approach Point
-			rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+			tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 			if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated = false;
 
 			if(calculated){
@@ -1375,7 +1373,7 @@ bool ManipController::pushBox()
 				//==== Ready to push
 				Pco  -= app_length*z;
 
-				rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+				tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 				if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 
 				//==== Pushing
@@ -1384,14 +1382,14 @@ bool ManipController::pushBox()
 					oPmargin << 0, -0.0725/2.0, 0;
 					Pco  += Ro*oPmargin*op;
 
-					rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+					tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 					if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 				}
 
 				//==== Hand go up
 				Pco  += app_length*z - Ro*oPmargin*op;
 
-				rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+				tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 				if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 			}
 
@@ -1424,7 +1422,7 @@ bool ManipController::pushBox()
 			Rp_ = arm_g->arm_path->joint(nj)->calcRfromAttitude(rodrigues(Ro*oTco, m_pi)*Ro*oRco*trans(pRcr[i]));
 
 			//==== Approach Point
-			rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+			tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 			if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated = false;
 
 			if(calculated){
@@ -1432,7 +1430,7 @@ bool ManipController::pushBox()
 				//==== Ready to push
 				Pco  -= app_length*z;
 
-				rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+				tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 				if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 
 				//==== Pushing
@@ -1441,14 +1439,14 @@ bool ManipController::pushBox()
 					oPmargin << 0, 0.0725/2.0, 0;
 					Pco  += Ro*oPmargin*op;
 
-					rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+					tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 					if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 				}
 
 				//==== Hand go up
 				Pco  += app_length*z - Ro*oPmargin*op;
 
-				rb->calcPalmFingParam(robot, Pco, Pco, Rp_, pPcr[i], pNcr[i], pTcr[i], Pp_, theta);
+				tc->arm(i)->getPalmPos(Pco, Pco, Rp_, pPcr[i], pRcr[i], Pp_, theta);
 				if(!setMotionSeq(PlanBase::NOT_GRASPING, PlanBase::ON_ENVIRONMENT, Pp_, Rp_, jointSeq, arm_g, fingers_g, mtime[1])) calculated2 = false;
 			}
 
@@ -1474,8 +1472,6 @@ bool ManipController::pushBox()
 		//---------
 		bodyItemRobot()->body()->calcForwardKinematics();
 
-		rb->writeFile(robot, tc->jointSeq, tc->motionTimeSeq, false);
-
 		//to remove
 		int base[2]={15,19};
 		double off = 10.0*m_pi/180.0;
@@ -1489,7 +1485,7 @@ bool ManipController::pushBox()
 						}
 				}
 		}
-		
+
 		os << "Success (push box)" << endl;
 		return true;
 }
@@ -1503,16 +1499,13 @@ void ManipController::calcJointSeq(Vector3& Pp_grasp, Matrix3& Rp_grasp, Vector3
 
 bool ManipController::doGraspPlanning()
 {
-#ifdef CALIB_MODE
-		rb->Calibration(robot);
-#else
 
-		if(robot==HIRO)
-				tc->setVisOffsetR();
-
-		if(robot==HIRO && targetObject->bodyItemObject->name()=="W4")
+		if(robot==HIRO && tc->targetObject->bodyItemObject->name()=="W4")
 				return movePallet();
-		else if(robot==HIRO && targetObject->bodyItemObject->name()=="W10"){
+		else if(robot==HIRO && tc->targetObject->bodyItemObject->name()=="W10"){
+				for(int i=0; i<4; i++)
+						PlacePlanner::instance()->putPos.IndexSet[i]=1;
+				os<< "Put Pos database is cleared" << endl;
 				return pushBox();
 		}
 
@@ -1530,11 +1523,8 @@ bool ManipController::doGraspPlanning()
 						palmPos = Pp_grasp;
 						palmRot = Rp_grasp;
 
-						if(envItem != NULL){
+						if(envItem != NULL)
 								calcJointSeq(Pp_grasp, Rp_grasp, Pp_put, Rp_put);
-
-								rb->writeFile(robot, tc->jointSeq, tc->motionTimeSeq);
-						}
 				}
 				else 	success=false;
 
@@ -1550,8 +1540,6 @@ bool ManipController::doGraspPlanning()
 				if(searchPickAndPlaceWithRegrasp(Pp_grasp, Rp_grasp, Pp_tmp_put, Rp_tmp_put, Pp_regrasp, Rp_regrasp, Pp_put, Rp_put, theta, theta_regrasp, false)){
 
 						calcJointSeqTestRegrasp(Pp_grasp, Rp_grasp, Pp_tmp_put, Rp_tmp_put, Pp_regrasp, Rp_regrasp, Pp_put, Rp_put, approachVec, approachVec2);
-
-						rb->writeFile(robot, tc->jointSeq, tc->motionTimeSeq);
 				}
 				else{
 						if(strategy==RIGHT_LEFT){
@@ -1571,16 +1559,100 @@ bool ManipController::doGraspPlanning()
 								palmPos = Pp_grasp;
 								palmRot = Rp_grasp;
 
-								if(envItem != NULL){
+								if(envItem != NULL)
+										calcJointSeq(Pp_grasp, Rp_grasp, Pp_put, Rp_put);
+						}
+						else{
+#ifdef PUT_PATTERN
+								if(strategy==LEFT_LEFT){
+										strategy=LEFT_PUT_RIGHT;
+										arm_p = tc->arm(0);
+										fingers_p[0] = tc->fingers(0,0);
+										fingers_p[1] = tc->fingers(0,1);
+								}
+								if(strategy==RIGHT_RIGHT){
+										strategy=RIGHT_PUT_LEFT;
+										arm_p = tc->arm(1);
+										fingers_p[0] = tc->fingers(1,0);
+										fingers_p[1] = tc->fingers(1,1);
+								}
+
+								calcIntermediatePutPos(Po_put, Ro_put, Po_tmp, Ro_tmp);
+
+								if(searchPickAndPlaceMotion(Pp_grasp, Rp_grasp, Pp_put, Rp_put, theta, false)){
+
 										calcJointSeq(Pp_grasp, Rp_grasp, Pp_put, Rp_put);
 
-										rb->writeFile(robot, tc->jointSeq, tc->motionTimeSeq);
+										palmPos = Pp_grasp;
+										palmRot = Rp_grasp;
+
+										vector<vector<int> > pathPlanDOFSeq;
+										vector<int> graspingStateSeq, graspingStateSeq2;
+										vector<VectorXd> jointSeq;
+										vector<double> timeSeq;
+
+										for(unsigned int i=0; i<tc->pathPlanDOFSeq.size(); i++){
+												pathPlanDOFSeq.push_back(tc->pathPlanDOFSeq[i]);
+												graspingStateSeq.push_back(tc->graspingStateSeq[i]);
+												graspingStateSeq2.push_back(tc->graspingStateSeq2[i]);
+												jointSeq.push_back(tc->jointSeq[i]);
+												timeSeq.push_back(tc->motionTimeSeq[i]);
+										}
+
+										targetObject->bodyItemObject->body()->link(0)->p = Po_tmp[0];
+										targetObject->bodyItemObject->body()->link(0)->attitude() = Ro_tmp[0];
+										for(int i=0; i<jointSeq[0].size(); i++)
+												bodyItemRobot()->body()->joint(i)->q = jointSeq[0](i);
+
+										bodyItemRobot()->body()->calcForwardKinematics();
+										tc->flush();
+
+										firstPick = false;
+
+										ArmPtr arm_ = arm_g;
+										arm_g = arm_p;
+										arm_p = arm_;
+
+										for(int i=0; i<2; i++){
+												FingerPtr finger_ = fingers_g[i];
+												fingers_g[i] = fingers_p[i];
+												fingers_p[i] = finger_;
+										}
+
+										if(searchPickAndPlaceMotion(Pp_grasp, Rp_grasp, Pp_put, Rp_put, theta, false)){
+
+												calcJointSeq(Pp_grasp, Rp_grasp, Pp_put, Rp_put);
+
+												for(unsigned int i=0; i<tc->pathPlanDOFSeq.size(); i++){
+														pathPlanDOFSeq.push_back(tc->pathPlanDOFSeq[i]);
+														graspingStateSeq.push_back(tc->graspingStateSeq[i]);
+														graspingStateSeq2.push_back(tc->graspingStateSeq2[i]);
+														jointSeq.push_back(tc->jointSeq[i]);
+														timeSeq.push_back(tc->motionTimeSeq[i]);
+												}
+												tc->pathPlanDOF.clear();
+												tc->graspingStateSeq.clear();
+												tc->graspingStateSeq2.clear();
+												tc->jointSeq.clear();
+												tc->motionTimeSeq.clear();
+
+												tc->pathPlanDOFSeq = pathPlanDOFSeq;
+												tc->graspingStateSeq = graspingStateSeq;
+												tc->graspingStateSeq2 = graspingStateSeq2;
+												tc->jointSeq = jointSeq;
+												tc->motionTimeSeq = timeSeq;
+
+										}
+										else success = false;
+
 								}
+								else success = false;
+#else
+								success = false;
+#endif
 						}
-						else		success = false;
 				}
 		}
-
 
 		if(success)
 				os << "Success: " << PlacePlanner::instance()->putPos.Index << endl;
@@ -1592,7 +1664,6 @@ bool ManipController::doGraspPlanning()
 				tc->flush();
 		}
 
-#endif
 		return true;
 }
 

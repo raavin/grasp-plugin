@@ -45,7 +45,7 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/extplugin/graspPlugin/RobotModels/HIRO/Plugi
     POST_BUILD
     COMMAND wget http://openhrp-aist-grx.googlecode.com/files/hironx-distribution-vrml.zip
     COMMAND unzip hironx-distribution-vrml.zip
-#    COMMAND patch -u hironx-distribution-vrml/main.wrl < fs_offset.diff #use wrist force sensor
+    COMMAND patch hironx-distribution-vrml/main.wrl < hand_range.diff
     )
 endif()
 

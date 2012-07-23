@@ -27,11 +27,14 @@ class HIRO_Arm: public Arm
 	
 		HIRO_Arm(cnoid::BodyPtr body, cnoid::Link *base, cnoid::Link *palm) : Arm(body, base, palm) {
 			this->base = base;
+			bothArm = true;
 			};
 		~HIRO_Arm() {	};
 //		virtual bool IK_arm(const cnoid::Vector3 &p, const cnoid::Matrix33 &R);
 		bool  IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R);
+		bool  IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R, const cnoid::VectorXd& q_old);
 		bool  IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R, double phi, const cnoid::VectorXd& q_old= cnoid::VectorXd::Zero(7));
+		bool getPalmPos(const cnoid::Vector3& Pco1, const cnoid::Vector3& Pco2, const cnoid::Matrix3& Rp, const cnoid::Vector3& pPcr1, const cnoid::Matrix3& pRcr1, cnoid::Vector3& Pp, cnoid::VectorXd& theta);
 		/*
 		double IndexFunc(double a, double b){return Arm::IndexFunc(a,b);}
 		cnoid::VectorXd calcGradient(double a, double b){return Arm::calcGradient(a,b);}
@@ -46,6 +49,7 @@ class HIRO_Arm: public Arm
 		
 	private:
 		cnoid::Link *base;
+		bool bothArm;
 };
 }
 #endif

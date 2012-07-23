@@ -35,8 +35,6 @@
 #include "../Grasp/Arm.h"
 #include "../Grasp/PlanBase.h"
 #include "ClusterParameter.h"
-#include "RobotLocalFunctions.h"
-#include "CollisionPair.h"
 #include "PlacePlanner.h"
 
 namespace grasp{
@@ -96,11 +94,10 @@ protected :
 		cnoid::Vector3 Pinit;
 		//std::vector<double> motionTimeSeq;
 		cnoid::Vector3 approachVec, approachVec2;
-
 		bool movePallet();
 		bool pushBox();
+		cnoid::Vector3 visOffset;
 
-		RobotLocalFunctions *rb;
 		CollisionPair *cp;
 		ParameterFileData *pf;
 };

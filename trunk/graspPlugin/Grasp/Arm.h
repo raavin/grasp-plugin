@@ -29,9 +29,14 @@ class Arm{
 		int nJoints;
 			
 		std::vector<double> armStandardPose;
+		cnoid::Vector3 base_p;
+		cnoid::Matrix3 base_R;
 			
 		virtual bool IK_arm(const cnoid::Vector3 &p, const cnoid::Matrix3 &R);
-		virtual bool  IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R, double phi, const cnoid::VectorXd& q_old=cnoid::VectorXd::Zero(7));
+		virtual bool IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R, const cnoid::VectorXd& q_old);
+		virtual bool IK_arm(const cnoid::Vector3& p, const cnoid::Matrix3& R, double phi, const cnoid::VectorXd& q_old=cnoid::VectorXd::Zero(7));
+		virtual bool getPalmPos(const cnoid::Vector3& Pco1, const cnoid::Vector3& Pco2, const cnoid::Matrix3& Rp, const cnoid::Vector3& pPcr1, const cnoid::Matrix3& pRcr1, cnoid::Vector3& Pp, cnoid::VectorXd& theta);
+
 
 //		bool IK_arm2(const Vector3 &p, const Matrix3 &R);
 		virtual double IndexFunc(double a, double b);

@@ -10,14 +10,39 @@
 #include <cnoid/SignalProxy>	/* modified by qtconv.rb 0th rule*/  
 #include "exportdef.h"
 
+#include <cnoid/Archive>
+#include <cnoid/MessageView>
+#include <cnoid/MainWindow>
+#include <cnoid/SpinBox>
+#include <cnoid/Button>
+#include <iostream>
+
+#include <QDialog>
+#include <QCheckBox>
+#include <QLayout>
+#include <QCheckBox>
+#include <QPushButton>
 
 namespace cnoid {
 
     class MessageView;
 	
 }
-    
+
 namespace grasp {
+    class SaveGraspPlatternDialog : public QDialog
+    {
+	    
+    public:
+        cnoid::SpinBox rotationDirection;
+        cnoid::DoubleSpinBox rotationAngle;
+        cnoid::SpinBox translationDirection;
+        cnoid::DoubleSpinBox translationLength;
+	QCheckBox* rotationYaxis;
+
+        SaveGraspPlatternDialog() ;
+	void okClicked();
+    };
 
         class EXCADE_API GraspBar : public cnoid::ToolBar, public boost::signals::trackable
         {
@@ -87,6 +112,7 @@ namespace grasp {
  //           void onSymmetricCopyButtonClicked(int direction, bool doMirrorCopy);
 //            void onZmpCmButtonClicked();
 //            void setZmp(BodyItem::ZmpPosition position);
+		SaveGraspPlatternDialog saveGraspPattern;
         };
 }
 

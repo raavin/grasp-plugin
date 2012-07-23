@@ -26,12 +26,14 @@ class ClusterParameter{
 
 		std::vector<cnoid::Vector3> controlPoints, approachVec, convexhullPoints;
 		std::vector<std::vector<cnoid::Vector3> > boundaryPointList;
+		std::vector<int> boundaryIndex;
 		cnoid::Vector3 normal, tangent, bbCenter, bbEdge;
 		int id;
 		std::vector<int> idPair;
 		double area;
 		int intention;
 		bool isPuttingCluster;
+		int Convexity;
 };
 
 class ParameterFileData {

@@ -3,18 +3,18 @@
   c) Kensuke Harada (AIST)
 */
 
-#include <cnoid/Plugin>
-#include <cnoid/MenuManager>
-#include <cnoid/SceneView>
-#include <cnoid/MessageView>
-#include <cnoid/SceneBody>
-#include <cnoid/SceneBodyManager>
+#include <cnoid/Plugin>	/* modified by qtconv.rb 0th rule*/  
+#include <cnoid/MenuManager>	/* modified by qtconv.rb 0th rule*/  
+#include <cnoid/SceneView>	/* modified by qtconv.rb 0th rule*/  
+#include <cnoid/MessageView>	/* modified by qtconv.rb 0th rule*/  
 #include <osg/Camera>
 #include <osg/Geode>
 #include <osg/GLExtensions>
 #include <osgDB/ReadFile>
 #include <osgGA/GUIEventAdapter>
 using namespace osgGA;
+
+#include <cnoid/SceneBodyManager>
 
 #include "ManipBar.h"
 #include "ManipController.h"
@@ -29,7 +29,6 @@ Vector3 objVisPos;
 Matrix3 objVisRot;
 double objMass;
 string bodywrlname;
-
 
 class ManipSceneBody : public cnoid::SceneBody {
 public:
@@ -79,7 +78,7 @@ class ManipPlugin : public cnoid::Plugin
 private:
 
 	//SceneView* sceneView;
-
+	
 	bool onTimeout() {
 		
 		return true;
@@ -95,8 +94,9 @@ public:
 		cnoid::SceneBodyManager* manager = cnoid::SceneBodyManager::instance();
 		grasp::GraspController::instance(ManipController::instance());
 		//ManipRtc::instance()->RtcStart();
+		//manage(manager->addSceneBodyFactory(create));
 		manage(manager->addSceneBodyFactory(create));
-		
+
 		addToolBar(ManipBar::instance());
 		
 		return true;

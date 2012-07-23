@@ -119,6 +119,7 @@ void ClusterParameter::deleteCluster(){
 		approachVec.clear();
 		convexhullPoints.clear();
 		boundaryPointList.clear();
+		boundaryIndex.clear();
 		idPair.clear();
 
 		normal <<0,0,0;
@@ -297,6 +298,7 @@ void ParameterFileData::readObjYamlFile(BodyItemPtr item, vector<ClusterParamete
 
 	ClusterParameter cluster;
 	Vector3 p;
+	cluster.deleteCluster();
 	cluster.isPuttingCluster = false;
 
 	if( item->body()->info()->find("Cluster")->type() == YAML_SEQUENCE){
@@ -417,6 +419,8 @@ void ParameterFileData::readEnvYamlFile(BodyItemPtr item, vector<ClusterParamete
 
 	ClusterParameter cluster;
 	Vector3 p;
+
+	cluster.deleteCluster();
 	cluster.isPuttingCluster = false;
 
 	if( item->body()->info()->find("EnvCluster")->type() == YAML_SEQUENCE){
@@ -454,7 +458,7 @@ void ParameterFileData::readEnvYamlFile(BodyItemPtr item, vector<ClusterParamete
 							}
 
 							
-							if( gSettings.find("cenvexhull")->type() == YAML_SEQUENCE ){ 
+							if( gSettings.find("convexhull")->type() == YAML_SEQUENCE ){ 
 									const YamlSequence& list = *gSettings["convexhull"].toSequence();
 									for(int i=0;i<list.size();i++){
 											p(i%3) = list[i].toDouble();
@@ -462,18 +466,42 @@ void ParameterFileData::readEnvYamlFile(BodyItemPtr item, vector<ClusterParamete
 													cluster.convexhullPoints.push_back(p);
 									}
 							}
+
+							if( gSettings.find("boundaryList")->type() == YAML_SEQUENCE ){ 
+									const YamlSequence& list = *gSettings["boundaryList"].toSequence();
+									for(int i=0;i<list.size();i++)
+											cluster.boundaryIndex.push_back(list[i].toInt());
+							}
 							
 							if( gSettings.find("boundary")->type() == YAML_SEQUENCE ){ 
 									const YamlSequence& list = *gSettings["boundary"].toSequence();
-									vector<Vector3> pList;
-									for(int i=0;i<list.size();i++){
-											p(i%3) = list[i].toDouble();
-											if(i%3==2)
-													pList.push_back(p);
+									if(cluster.boundaryIndex.size()>0){
+											int k=0;
+											for(size_t i=0; i<cluster.boundaryIndex.size(); i++){
+													vector<Vector3> pList;
+													for(int j=0; j<cluster.boundaryIndex[i]*3; j++){
+														p(k%3) = list[k].toDouble();
+														if(k%3==2) pList.push_back(p);
+														k++;
+													}
+													cluster.boundaryPointList.push_back(pList);
+											}
 									}
-									cluster.boundaryPointList.push_back(pList);
+									else{
+											vector<Vector3> pList;
+											for(size_t k=0; k<list.size(); k++){
+												p(k%3) = list[k].toDouble();
+												if(k%3==2) pList.push_back(p);
+											}
+											cluster.boundaryPointList.push_back(pList);
+									}
 							}
-							
+
+							if( gSettings.find("convexity")->type() == YAML_SEQUENCE ){ 
+									const YamlSequence& list = *gSettings["convexity"].toSequence();
+									cluster.Convexity = list[0].toInt();
+							}
+
 							if( gSettings.find("bounding_box_edge")->type() == YAML_SEQUENCE ){ 
 									const YamlSequence& list = *gSettings["bounding_box_edge"].toSequence();
 									for(int i=0;i<list.size();i++)
