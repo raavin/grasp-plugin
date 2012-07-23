@@ -16,8 +16,6 @@ set(sources
     ${rtc-dir}/ManipulatorCommonInterface_CommonStub.cpp
     ${rtc-dir}/ManipulatorCommonInterface_MiddleLevelStub.cpp
     ${rtc-dir}/ManipulatorCommonInterface_DataTypesSK.cc
-
-	../GripperManipulation/RobotLocalFunctions.cpp
 )
 
 set(headers
@@ -34,7 +32,6 @@ set(headers
     ${rtc-dir}/ManipulatorCommonInterface_CommonStub.h
     ${rtc-dir}/ManipulatorCommonInterface_MiddleLevel.hh
     ${rtc-dir}/ManipulatorCommonInterface_MiddleLevelStub.h
-	../GripperManipulation/RobotLocalFunctions.h
   )
 
 include_directories(${rtc-dir} ${PYTHON_INCLUDE_PATH}

@@ -13,7 +13,6 @@
 #include <cnoid/EigenUtil>
 #include "ArmControllerRtc.h"
 #include "../Grasp/GraspController.h"
-#include "../GripperManipulation/RobotLocalFunctions.h"
 
 namespace grasp{
 
@@ -61,6 +60,8 @@ class RobotInterface {
 		int moveSingleArm();
 		::ArmController * controllerRtc() { return ArmControllerRtc::instance()->comp_; };
 		int numJoints() { return PlanBase::instance()->arm()->arm_path->numJoints(); }
+		void convertAngles(const cnoid::VectorXd & seq, std::vector<double> & angles, double off);
+		void checkAngles(std::vector<double> & angles);
 };
 
 

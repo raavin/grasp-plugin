@@ -274,7 +274,11 @@ bool PlacePlanner::findTargetTriangle( cnoid::Link *targetLink, cnoid::Vector3 &
 		static bool firstRun = true;
 		static cnoid::BodyItem *localArrowBI = new cnoid::BodyItem;
 		if( firstRun ) {
+#ifdef CNOID_10_11
 				boost::filesystem::path robotfullpath( pBody->modelFilePath() );
+#else
+				boost::filesystem::path robotfullpath( pBody->lastAccessedFilePath() );
+#endif
 				std::string bodyItemRobotPath = boost::filesystem::path( robotfullpath.branch_path() ).string();
 				localArrowBI->loadModelFile( bodyItemRobotPath + "/../project/arrowhrp.wrl" );
 		}
