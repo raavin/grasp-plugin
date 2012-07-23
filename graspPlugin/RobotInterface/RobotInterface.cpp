@@ -396,8 +396,6 @@ int RobotInterface::moveDualArm()
 
 		static const double offset = 10.0;
 
-		GripperManipulation::RobotLocalFunctions rb;
-
 		PlanBase* tc = PlanBase::instance();
 		int error = 0;
 		vector<VectorXd>& jointSeq = tc->jointSeq;
@@ -410,13 +408,11 @@ int RobotInterface::moveDualArm()
 		static const int angle_size = 23;
 		for (int i = 0; i < size; i++){
 			vector<double> angles(angle_size);
-			rb.convertAngles(jointSeq[i], angles, offset);
+			convertAngles(jointSeq[i], angles, offset);
 			try {
-				rb.checkAngles(angles);
+				checkAngles(angles);
 			} catch (std::vector<double> angles) {
-				char jointlogfile[256];
-				rb.writeJointSeq(jointlogfile, 255, jointSeq, motionTimeSeq);
-				cout << "Wrong jointSeq! Check " << jointlogfile << endl;
+				cout << "Wrong jointSeq! Check " << endl;
 				throw angles;
 			}
 			MotionCommands::JointPos jp(angle_size + 1);
@@ -467,4 +463,30 @@ int RobotInterface::objName2Id(string objname, string obj_data){
 			}
 		}
 		return -1;
+}
+
+void RobotInterface::convertAngles(const VectorXd & seq, vector<double> & angles, double off) {
+	const double o = 180.0/3.14159;
+
+	const int asize = (int)angles.size();
+	for (int i = 0; i < asize; i++)
+		angles[i] = seq(i)*o;
+
+	const int base[] = {15, 19};
+	const double offset[3] = {-off, 0.0, off};
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 3; j++) {
+			int k = base[i] + j;
+			angles[k] += offset[j];
+		}
+	}
+}
+
+void RobotInterface::checkAngles(vector<double> & angles) {
+	const int asize = (int)angles.size();
+	for (int i = 0; i < asize; i++) {
+		if (angles[i] > 360.0) {
+			throw angles;
+		}
+	}
 }
