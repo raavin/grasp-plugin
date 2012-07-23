@@ -43,13 +43,7 @@ class ForceClosureTest
 			
 
 	double forceClosureTestEllipsoid(cnoid::VectorXd &wrench, cnoid::Vector3 Pc[], cnoid::Vector3 Nc[], int points, double mu, double f_max);
-	double forceClosureTestEllipsoidSoftFinger(cnoid::VectorXd &wrench, cnoid::Vector3 Pc[], cnoid::Vector3 Nc[], int points, double mu, double f_max, const std::vector<double>& en);
-	double forceClosureTestEllipsoidInternal(cnoid::VectorXd &wrench, cnoid::Vector3 Pc[], cnoid::Vector3 Nc[], int points, double mu, double f_max);
 	double NormalForceClosureTest(cnoid::VectorXd& wrench, cnoid::Vector3 cpos[], cnoid::Vector3 Nc[], int points, double mu, int cface, double f_max);
-	//bool NormalFormClosureTest(cnoid::Vector3* Pc, cnoid::Vector3* Nc, int points, std::vector<double>& spanVectors);
-	double ForceClosureTestManipulationForce(cnoid::VectorXd &wrench, cnoid::Vector3 Pc[], cnoid::Vector3 Nc[], int points, double mu, double gamma,cnoid::MatrixXd jacobi[]);
-	
-	void forceClosureTestOnly();
 	
 	protected: 
 
