@@ -29,6 +29,7 @@ Finger::Finger(BodyPtr body, Link *palm, Link *tip)
 		close.push_back(0.002);
 	}
 	contact.push_back(true);
+	this->tip = tip;
 	
 	return ;	
 }
@@ -36,7 +37,8 @@ Finger::Finger(BodyPtr body, Link *palm, Link *tip)
 void Finger::coldetLinkPair(cnoid::BodyItemPtr bo){
 	linkObjPair = new ColdetLinkPairPtr[nJoints];
 	for(int j=0;j<nJoints;j++){
-		linkObjPair[j] = new ColdetLinkPair(fing_path->joint(j), bo->body()->link(0));
+		if(j==nJoints-1) linkObjPair[j] = new ColdetLinkPair(tip, bo->body()->link(0));
+		else linkObjPair[j] = new ColdetLinkPair(fing_path->joint(j), bo->body()->link(0));
 	}
 }
 

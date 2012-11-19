@@ -9,7 +9,9 @@
 9 preplanning_souken.txt  soukenhrp.wrl
 10 preplanning_remote.txt remotehrp.wrl
 11 preplanning_glasscase.txt glass_casehrp.wrl
-12 preplanning_frame.txt frame2.txt
+12 preplanning_frame.txt frame2Hrp.wrl
+13 preplanning_frame2.txt frame3Hrp.wrl
+14 preplanning_frame3.txt frame4Hrp.wrl
 21 preplanning_can200_side.txt  can200hrp.wrl
 300 preplanning_fridge.txt 
 

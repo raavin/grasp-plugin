@@ -120,9 +120,9 @@ MotionState PlanBase::getMotionState(double time){
 	ret.jointSeq = VectorXd(body()->numJoints());
 	for(int i=0;i<body()->numJoints();i++)
 		ret.jointSeq[i] = body()->joint(i)->q;
-
-	//for(int i=0;i<arm()->nJoints;i++)
-	//               ret.jointSeq[arm()->arm_path->joint(i)->jointId] = arm()->arm_path->joint(i)->q;
+	
+	ret.pos = body()->link(0)->p;
+	ret.rpy = rpyFromRot(body()->link(0)->R);
 
 	ret.graspingState = getGraspingState();
 	ret.graspingState2 = getGraspingState2();
@@ -136,10 +136,14 @@ void PlanBase::setMotionState(MotionState gm){
 	for(int i=0;i<body()->numJoints();i++){
 		body()->joint(i)->q = gm.jointSeq[i];
 	}
+	body()->link(0)->p = gm.pos;
+	body()->link(0)->R = rotFromRpy(gm.rpy);
+	
 	setGraspingState(gm.graspingState);
 	setGraspingState2(gm.graspingState2);
 	setObjectContactState(gm.objectContactState);
 	pathPlanDOF = gm.pathPlanDOF;
+	setTolerance(gm.tolerance);
 	calcForwardKinematics();
 }
 
@@ -156,6 +160,8 @@ PlanBase::PlanBase()  : 	os (MessageView::mainInstance()->cout() )
 	graspingState = NOT_GRASPING;
 	graspingState2 = NOT_GRASPING;
 	tolerance = 0.0;
+	ulimitMap=Vector3(1,1,1);
+	llimitMap = Vector3(-1,-1,-1);
 
     if ( PyImport_AppendInittab( (char *)"grasp", initgrasp ) == -1 ) {
         MessageView::mainInstance()->put("faild init Grasp Module");
@@ -504,12 +510,22 @@ bool PlanBase::isColliding(){
 	return false;
 }
 
-bool PlanBase::isCollidingPointCloud(const vector<Vector3>& p){
+bool PlanBase::isCollidingPointCloud(const vector<Vector3>& p, BodyItemPtr item, double tol){
 
-	for(int i=0; bodyItemRobot()->body()->numLinks(); i++)
-			if(bodyItemRobot()->body()->link(0)->coldetModel->checkCollisionWithPointCloud(p, 0.001))
+	for(int i=0; i<item->body()->numLinks(); i++)
+			if(item->body()->link(i)->coldetModel->checkCollisionWithPointCloud(p, tol))
 					return true;
 
+	return false;
+}
+
+bool PlanBase::isCollidingPointCloudFinger(const vector<Vector3>& p, double tol){
+
+	for(int i=0; i<nFing(); i++)
+		for(int j=0; j<fingers(i)->fing_path->numJoints(); j++){
+			if(fingers(i)->fing_path->joint(j)->coldetModel->checkCollisionWithPointCloud(p, tol))
+					return true;
+		}
 	return false;
 }
 
@@ -668,6 +684,25 @@ void PlanBase::setTrajectoryPlanDOF(int k){
 		cout << pathPlanDOF[i] << " ";	cout << endl;
 #endif
 }
+
+void PlanBase::setTrajectoryPlanMapDOF(){
+
+	pathPlanDOF.clear();
+	
+	int top = body()->numJoints();
+	pathPlanDOF.push_back(top); //position x
+	pathPlanDOF.push_back(top+1); //position y;
+	
+	ulimitMap = Vector3(3.0,3.0,3.0);
+	llimitMap = Vector3(-3.0,-3.0,-3.0);
+	
+#ifdef DEBUG_MODE
+	cout << "Plan Map DOF= ";
+	for (unsigned int i=0; i<pathPlanDOF.size(); i++)
+		cout << pathPlanDOF[i] << " ";	cout << endl;
+#endif
+}
+
 
 double PlanBase::calcContactPoint(ColdetLinkPairPtr cPair, Vector3 &Po, Vector3 &Pf, Vector3 &objN) {
 

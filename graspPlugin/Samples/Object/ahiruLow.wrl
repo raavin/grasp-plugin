@@ -2,7 +2,16 @@
 
     Transform {
       children  Shape {
-                    geometry    IndexedFaceSet {
+			appearance	Appearance {
+			  material	DEF BANANA_light_or Material {
+			    ambientIntensity	0.477124
+			    diffuseColor	0.8 0.8 0.0
+			    specularColor	0 0 0
+			    transparency	0
+			  }
+
+			}
+                   geometry    IndexedFaceSet {
                       coord     Coordinate {
                       point [
 

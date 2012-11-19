@@ -59,6 +59,7 @@ namespace cnoid {
             void onItemSelectionChanged(const ItemList<BodyItem>& bodyItems);
             void onBodyItemDetachedFromRoot();
 	    void onTrajectoryPlanButtonClicked();
+	    void onResetButtonClicked();
 	    void onSetStartMotionStateButtonClicked();
 	    void onSetEndMotionStateButtonClicked();
 	  

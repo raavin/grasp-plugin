@@ -29,6 +29,7 @@ class TrajectoryPlanner {
 	virtual bool doTrajectoryPlanning();
 		
 	virtual bool updateTrajectoryFromMotion(const cnoid::BodyMotionPtr motionObject, const cnoid::BodyMotionPtr motionRobot, std::vector<MotionState>& motionSeq);
+	virtual bool outputTrajectoryForOpenHRP(const cnoid::BodyMotionPtr motionRobot);
 	
 	cnoid::PoseSeqItem* poseSeqItemRobot;
 	cnoid::PoseSeqItem* poseSeqItemObject;
