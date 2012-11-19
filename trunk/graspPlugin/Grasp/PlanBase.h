@@ -33,6 +33,15 @@ class Box{
 		cnoid::Vector3 edge;
 };
 
+class Approach{
+	public:
+		Approach(const cnoid::Vector3& dir, const std::vector<cnoid::Vector3>& pos, const std::vector<cnoid::Vector3>& nor)
+		{this->direction = dir; this->position = pos; this->normal = nor;}
+		cnoid::Vector3 direction;
+		std::vector<cnoid::Vector3> position;
+		std::vector<cnoid::Vector3> normal;
+};
+
 class EXCADE_API TargetObject{
 	public:
 		friend class PlanBase;
@@ -55,6 +64,8 @@ class EXCADE_API TargetObject{
 		cnoid::Vector3 objCoM_;
 		Box OCP;
 		std::string preplanningFileName;
+
+		std::vector<Approach*> approach;
 };
 
     class ArmFingers;
@@ -107,7 +118,7 @@ class EXCADE_API ArmFingers  : public cnoid::Item
 
 class EXCADE_API MotionState {
 public:
-	MotionState(){ }
+	MotionState(){ id = -1;}
 	MotionState(cnoid::VectorXd jointSeq, int graspingState=0, int graspingState2=0, int id=-1, double tolerance=-1, double time=0){
 		this->jointSeq = cnoid::VectorXd::Zero(jointSeq.size());
 		this->jointSeq = jointSeq;
@@ -116,9 +127,13 @@ public:
 		this->time = time;
 		this->id = id;
 		this->tolerance = tolerance;
+		pos.setZero();
+		rpy.setZero();
 	}
 
 	cnoid::VectorXd jointSeq;
+	cnoid::Vector3 pos;
+	cnoid::Vector3 rpy;	
 	int graspingState, graspingState2;
 	int objectContactState;
 	double time;
@@ -228,7 +243,7 @@ public :
 
 	//==Object==
 	TargetObject* targetObject;
-	std::list<TargetObject*> multiTargetObject;
+	std::vector<TargetObject*> multiTargetObject;
 
 	//==Robot==
 	ArmFingers* targetArmFinger;
@@ -241,12 +256,16 @@ public :
 
 	void calcForwardKinematics();
 	bool isColliding();
-	bool isCollidingPointCloud(const std::vector<cnoid::Vector3>& p);
 	void setTolerance(double t){tolerance = t;}
 	double clearance();
 	double tolerance;
 	std::vector<int> pathPlanDOF;
 	std::vector<std::vector<int> > pathPlanDOFSeq;
+
+	bool isCollidingPointCloud(const std::vector<cnoid::Vector3>& p, cnoid::BodyItemPtr item, double tol=0.001);
+	bool isCollidingPointCloudFinger(const std::vector<cnoid::Vector3>& p, double tol=0.001);
+	std::vector<cnoid::Vector3> pointCloud;
+
 
 	void setGraspingState(int state);
 	void setGraspingState2(int state);
@@ -258,6 +277,7 @@ public :
 	int getObjectContactState() {return objectContactState; }
 	void setTrajectoryPlanDOF();
 	void setTrajectoryPlanDOF(int k);
+	void setTrajectoryPlanMapDOF();	
 	enum GraspingStates { NOT_GRASPING, UNDER_GRASPING, GRASPING };
 	//enum FingerGraspingStates { FINGER_INIT, FINGER_CLOSE, FINGER_OPEN, FINGER_MOVE };
 	enum TargetGraspingStates { ON_ENVIRONMENT, OFF_ENVIRONMENT };
@@ -273,6 +293,8 @@ public :
 	MotionState endMotionState;
 	MotionState graspMotionState;
 	MotionState placeMotionState;
+	cnoid::Vector3 ulimitMap;
+	cnoid::Vector3 llimitMap;
 
 	bool stopFlag;
 

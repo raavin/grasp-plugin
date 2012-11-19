@@ -32,6 +32,7 @@ class mpkRobots{
                 cnoid::BodyItemPtr robots;
 	//cnoid::JointPathPtr arm_path;
                 int nJoints;
+		bool map;
 
                 void get_config(mpkConfig &q);
                 void set_config(mpkConfig &q);

@@ -27,6 +27,7 @@ class Finger{
 		std::vector <int>compLink;
 		std::vector <double>close;
 		cnoid::JointPathPtr fing_path;
+		cnoid::Link *tip;
 		int nJoints;
 
 		std::vector<double> fingerOpenPose, fingerGraspPose;

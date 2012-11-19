@@ -8,17 +8,12 @@
 #include "VectorMath.h"
 #define ALM0 1e-10
 
-/**********************************************
-
-  éZèpìIèîä÷êî
-  
-**********************************************/
 using namespace std;
 using namespace cnoid;
 
 namespace grasp{
-		
-		
+
+
 
 Matrix3 sqew(const Vector3& a){
   Matrix3 ret;
@@ -145,15 +140,15 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
 	 double min ( double a, double b ){
 		return (a<b)? a : b;
 	}
-	
-	
+
+
 	 double dot( cnoid::Vector3 v1,cnoid::Vector3 v2){
 		return v1.dot(v2);
 	}
 	 double inner_prod( cnoid::VectorXd v1,cnoid::VectorXd v2){
 		return v1.dot(v2);
 	}
-	
+
      int calcEigenVectors(const cnoid::MatrixXd &_a, cnoid::MatrixXd  &_evec, cnoid::VectorXd &_eval)
     {
         assert( _a.rows() == _a.cols() );
@@ -171,8 +166,8 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
      int calcPseudoInverse(const cnoid::MatrixXd &_a, cnoid::MatrixXd &_a_pseu, double _sv_ratio)
     {
 		Eigen::JacobiSVD<cnoid::MatrixXd> svd(_a, Eigen::ComputeThinU | Eigen::ComputeThinV);
-		
-		cnoid::VectorXd s = svd.singularValues(); 
+
+		cnoid::VectorXd s = svd.singularValues();
         int i, j, k;
 
         double smin, smax=0.0;
@@ -183,13 +178,13 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
 			if (s[j] <= smin) s[j] = 0.0;
 			else s[j] = 1.0/s[j];
 		}
-        // V * (S^(-1)*U^(T)) 
+        // V * (S^(-1)*U^(T))
 		_a_pseu = svd.matrixV() * s.asDiagonal() * svd.matrixU().transpose();
-		
+
        return 0;
     }
-	
-	
+
+
      int solveLinearEquation(const cnoid::MatrixXd &_a, const cnoid::VectorXd &_b, cnoid::VectorXd &_x, double _sv_ratio)
     {
 		if(_a.rows() == _a.cols() ){
@@ -198,7 +193,7 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
 		else{
 			cnoid::MatrixXd _a_pseu;
 			calcPseudoInverse(_a,_a_pseu,_sv_ratio);
-			_x = _a_pseu* _b;			
+			_x = _a_pseu* _b;
 		}
     }
      Vector3 omegaFromRot(const cnoid::Matrix3& r)
@@ -256,7 +251,7 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
             az + axy,        1.0 - azz - axx, -ax + ayz,
             -ay + azx,       ax + ayz,        1.0 - ayy - axx;
 	}
-	
+
      void calcRotFromRpy(cnoid::Matrix3& out_R, double r, double p, double y){
         const double cr = cos(r), sr = sin(r), cp = cos(p), sp = sin(p), cy = cos(y), sy = sin(y);
         out_R(0,0)= cp*cy;
@@ -273,7 +268,7 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
      Vector3 rpyFromRot(const cnoid::Matrix3& m)
     {
         double roll, pitch, yaw;
-    
+
         if ((fabs(m(0,0))<fabs(m(2,0))) && (fabs(m(1,0))<fabs(m(2,0)))) {
             // cos(p) is nearly = 0
             double sp = -m(2,0);
@@ -283,10 +278,10 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
                 sp = 1;
             }
             pitch = asin(sp); // -pi/2< p < pi/2
-	
+
             roll = atan2(sp*m(0,1)+m(1,2),  // -cp*cp*sr*cy
                          sp*m(0,2)-m(1,1)); // -cp*cp*cr*cy
-	
+
             if (m(0,0)>0.0) { // cy > 0
                 (roll < 0.0) ? (roll += M_PI) : (roll -= M_PI);
             }
@@ -307,35 +302,35 @@ double dbl(Vector3 &a){ return (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);}
         }
         return cnoid::Vector3(roll, pitch, yaw);
     }
-		
+
     Matrix3 rodrigues(const cnoid::Vector3& axis, double q){
         cnoid::Matrix3 R;
         calcRodrigues(R, axis, q);
         return R;
     }
-    
+
     Matrix3 rotFromRpy(const cnoid::Vector3& rpy){
         cnoid::Matrix3 R;
         calcRotFromRpy(R, rpy[0], rpy[1], rpy[2]);
         return R;
     }
-    
+
     Matrix3 rotFromRpy(double r, double p, double y){
         cnoid::Matrix3 R;
         calcRotFromRpy(R, r, p, y);
         return R;
     }
-		
+
      double det(const cnoid::MatrixXd &_a)
     {
 		assert( _a.rows() == _a.cols() );
-		return _a.determinant(); 
+		return _a.determinant();
 		// simple determinant
     }
-	
+
 
 double vmax(const vector<double> &a){
-  
+
   vector<double>::const_iterator I=a.begin();
 
   double x = *I;
@@ -348,20 +343,25 @@ double vmax(const vector<double> &a){
 }
 
 int argmax(const vector<double> &a){
-  
-  int arg=0;
-  double x=a[0];
-  for(int i=1; i<(int)a.size(); i++)
-    if(a[i]>x){
-      x = a[i];
-      arg = i;
-    }
 
-  return arg;
+	if(a.size()==0){
+		cout << "WARINIG: input size 0 in argmax" << endl;
+		return -1;
+	}
+
+	int arg=0;
+	double x=a[0];
+	for(int i=1; i<(int)a.size(); i++)
+		if(a[i]>x){
+			x = a[i];
+			arg = i;
+		}
+
+	return arg;
 }
 
 double vmin(const vector<double> &a){
-  
+
   vector<double>::const_iterator I=a.begin();
 
   double x = *I;
@@ -374,16 +374,21 @@ double vmin(const vector<double> &a){
 }
 
 int argmin(const vector<double> &a){
-  
-  int arg=0;
-  double x=a[0];
-  for(int i=1; i<(int)a.size(); i++)
-    if(a[i]<x){
-      x = a[i];
-      arg = i;
-    }
 
-  return arg;
+	if(a.size()==0){
+		cout << "WARINIG: input size 0 in argmin" << endl;
+		return -1;
+	}
+
+	int arg=0;
+	double x=a[0];
+	for(int i=1; i<(int)a.size(); i++)
+		if(a[i]<x){
+			x = a[i];
+			arg = i;
+		}
+
+	return arg;
 }
 
 double abs(const Vector3& a)
@@ -413,7 +418,7 @@ double det33(const Matrix3& V)
 
 double distance(const Vector3 & pt, const VectorXd &r)
 {
-  //Distance between (pt) and (r(0) x + r(1) y + r(2) z + r(3) = 0) 
+  //Distance between (pt) and (r(0) x + r(1) y + r(2) z + r(3) = 0)
 
   return (r(0)*pt(0)+r(1)*pt(1)+r(2)*pt(2)+r(3))/sqrt(r(0)*r(0)+r(1)*r(1)+r(2)*r(2));
 }
@@ -448,7 +453,7 @@ Vector3 projection(const Vector3& e, const VectorXd& r)
 
   double s = dot(n, v);
   double t = sqrt(1 - s*s);
-  
+
   return Vector3( (v-s*n)/t );
 }
 
@@ -468,7 +473,7 @@ void parallelPlane(const VectorXd& r0, double l, VectorXd& r1)
 
   for(int i=0; i<3; i++)
       r1(i) = r0(i);
-  
+
   r1(3) = r0(3) - l * sqrt(r0(0)*r0(0)+r0(1)*r0(1)+r0(2)*r0(2));
 
   return;
@@ -505,8 +510,8 @@ bool calcCommonLine(const VectorXd& r0, const VectorXd& r1, Vector3& p, Vector3&
 
 double area(const Vector3& p0, const Vector3& p1, const Vector3& p2)
 {
-  Vector3 alpha = normalPoint(p0, p1, Vector3(p2-p1)); 
-  
+  Vector3 alpha = normalPoint(p0, p1, Vector3(p2-p1));
+
   return 0.5*abs(Vector3(p0-alpha))*abs(Vector3(p2-p1));
 }
 
@@ -533,9 +538,9 @@ void sort_by(vector<Vector3>& p, vector<double>& dist)
       again = false;
       vector<Vector3>::iterator IP=p.begin()+1;
       vector<double>::iterator ID=dist.begin()+1;
-      
+
       while( ID != dist.end() ) {
-	
+
           if( *(ID-1) > *ID ){
 	      reverse(ID-1, ID+1);
 	      reverse(IP-1, IP+1);
@@ -544,12 +549,12 @@ void sort_by(vector<Vector3>& p, vector<double>& dist)
 	  IP++;
 	  ID++;
       }
-      
+
   }while(again);
-  
+
   return;
 
-} 
+}
 
 void sort_by(vector<int>& p, vector<double>& dist)
 {
@@ -564,9 +569,9 @@ void sort_by(vector<int>& p, vector<double>& dist)
       again = false;
       vector<int>::iterator IP=p.begin()+1;
       vector<double>::iterator ID=dist.begin()+1;
-      
+
       while( ID != dist.end() ) {
-	
+
           if( *(ID-1) > *ID ){
 	      reverse(ID-1, ID+1);
 	      reverse(IP-1, IP+1);
@@ -575,12 +580,12 @@ void sort_by(vector<int>& p, vector<double>& dist)
 	  IP++;
 	  ID++;
       }
-      
+
   }while(again);
-  
+
   return;
 
-} 
+}
 
 bool included(int a, const vector<int> b){
 
@@ -591,7 +596,7 @@ bool included(int a, const vector<int> b){
 }
 
 int argument(const vector<double> &a, double b){
-  
+
   int arg=0;
   double x=a[0];
   for(int i=1; i<(int)a.size(); i++)
@@ -608,7 +613,7 @@ int argument(const vector<int>& a, int n){
   for(unsigned int i=0; i<a.size(); i++)
     if(a[i] == n)
       return i;
-  
+
   return -1;
 }
 
@@ -649,7 +654,7 @@ int sol2(double xa[3], double xz[2]) {
 		if(xa[1]*xa[1] <= ALM0*ALM0) return 0;
 		xz[0] = xz[1] = -xa[0]/xa[1];
 		return 1;
-	}		
+	}
 	double D = xa[1] * xa[1] - 4.0 * xa[2] * xa[0];
 //	cout << "D"<< D << " "<<xa[2] << " "<<xa[1] << " "<<xa[0] << endl;
 	if (D < -ALM0*ALM0) return 0;
@@ -716,9 +721,9 @@ int sol4(double xa[5], double xz[4]) {
 	double p, q, r;
 	double b[4], cb[4], cz[3];
 	std::complex<double> p3, q3;
-	
+
 	if(xa[4]*xa[4]<= ALM0*ALM0) return sol3(xa,xz);
-	
+
 
 	b[0] = xa[0] / xa[4];
 	b[1] = xa[1] / xa[4];
@@ -776,7 +781,7 @@ int sol4(double xa[5], double xz[4]) {
 			ez[3] = -sqt - q3 - 0.25 * b[3];
 		} else ez[0] = ez[1] = ez[2] = ez[3] = -0.25 * b[3];
 		int cnt = 0;
-		
+
 		for (int i = 0;i < 4;i++) {
 //			cout << i << " " << real (ez[i] ) << " " << imag (ez[i]) << endl;
 			if (fabs((ez[i]).imag()) > ALM0) continue;

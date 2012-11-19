@@ -287,6 +287,11 @@ sample(const sblMilestone& m, sblMilestone& new_node, double rho)
   mpkConfig conf(m.getConfig().size());
   int i=1;  double rho_local= rho;
 
+  bool map;
+  if(m.getConfig().size() > robots_->nJoints+5 ) map = true;
+  else map = false;
+	
+	
   do{
     randConfig.LocalBoxSample(m.getConfig(),rho_local,&conf, sampleDOF);
 
@@ -302,6 +307,12 @@ sample(const sblMilestone& m, sblMilestone& new_node, double rho)
     for ( int j=0; j<robots_->nJoints; j++, c++ ) {
         if ( robots_->param_opts[j].is_frozen || robots_->param_opts[j].is_passive )
 	    conf[c] = m.getConfig()[c];
+    }
+    if(map){
+	for ( int j=robots_->nJoints; j< (robots_->nJoints+6); j++, c++ ) {
+		if ( robots_->param_opts[j].is_frozen || robots_->param_opts[j].is_passive )
+			conf[c] = m.getConfig()[c];
+	}
     }
 
     new_node.setConfig(conf);

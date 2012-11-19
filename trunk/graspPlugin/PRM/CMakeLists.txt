@@ -3,7 +3,7 @@
 set(libname CnoidPRMPlugin)
 
 set(sources
-  SBLinterface.cpp
+  PlanInterface.cpp
   mpkConfigChecker.cpp
   mpkRobots.cpp
   mpkSimpleSegmentChecker.cpp

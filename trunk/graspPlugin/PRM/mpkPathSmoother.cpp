@@ -191,6 +191,7 @@ smoothe(int num_steps)
   int num_shortcuts = 0;
   int orig_num_segs = num_segs();
   double orig_len = length();
+	
 
   for ( int i=0; i<num_steps; i++ ) {
 
@@ -207,6 +208,7 @@ smoothe(int num_steps)
 
       n1 = lin_interpol(t1, p1);
       n2 = lin_interpol(t2, p2);
+	    
 
 #ifdef ADAPT_COLLCHECKER
       if ( check1.clearance(&p1) > 0 && check2.clearance(&p2) > 0 ) {
@@ -256,11 +258,11 @@ smoothe(int num_steps)
    }
    cerr << endl;
    */
-   }
+  }
 
     //Part added by Harada@aist
    for(int i=0; i<5; i++){
-     
+	   
      for (node* curr = first; curr; curr=curr->next){
 
        if(!curr->next || !curr->next->next ) continue;

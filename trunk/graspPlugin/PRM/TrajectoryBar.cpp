@@ -37,6 +37,9 @@ TrajectoryBar::TrajectoryBar()
 	addButton(("Start"), ("Path planning start"))->
 		sigClicked().connect(bind(&TrajectoryBar::onTrajectoryPlanButtonClicked, this));	/* modified by qtconv.rb 6th rule*/  
 
+	addButton(("Reset"), ("motion states reset"))->
+		sigClicked().connect(bind(&TrajectoryBar::onResetButtonClicked, this));	/* modified by qtconv.rb 6th rule*/  
+	
 	addButton(("setStartState"), ("Set start Motion"))->
 		sigClicked().connect(bind(&TrajectoryBar::onSetStartMotionStateButtonClicked, this));	/* modified by qtconv.rb 6th rule*/  
 	
@@ -60,7 +63,7 @@ TrajectoryBar::~TrajectoryBar()
 
 void TrajectoryBar::onTrajectoryPlanButtonClicked()
 {
-	if(PlanBase::instance()->bodyItemRobot()==NULL){
+	if(!PlanBase::instance()->targetArmFinger){
 		os << "error: Set Robot" << endl;
 		return;
 	}
@@ -74,19 +77,32 @@ void TrajectoryBar::onTrajectoryPlanButtonClicked()
 			os <<  "Trajectory Planning is failed" << endl;	
 }
 
+void TrajectoryBar::onResetButtonClicked()
+{
+	PlanBase::instance()->graspMotionSeq.clear();
+	PlanBase::instance()->startMotionState.id = -1;
+	PlanBase::instance()->endMotionState.id = -1;
+	os << "Motion states clear" << endl;
+}
+
+
 void TrajectoryBar::onSetStartMotionStateButtonClicked(){
-	if(PlanBase::instance()->bodyItemRobot()==NULL){
+	if(!PlanBase::instance()->targetArmFinger){
 		os << "error: Set startMotionState" << endl;
 		return;
 	}
+	PlanBase::instance()->graspMotionSeq.clear();
 	PlanBase::instance()->startMotionState = PlanBase::instance()->getMotionState();
+	PlanBase::instance()->startMotionState.id = 1;
 }
 void TrajectoryBar::onSetEndMotionStateButtonClicked(){
-	if(PlanBase::instance()->bodyItemRobot()==NULL){
+	if(!PlanBase::instance()->targetArmFinger){
 		os << "error: Set endMotionState" << endl;
 		return;
 	}
+	PlanBase::instance()->graspMotionSeq.clear();
 	PlanBase::instance()->endMotionState = PlanBase::instance()->getMotionState();
+	PlanBase::instance()->endMotionState.id = 2;
 }
 
 

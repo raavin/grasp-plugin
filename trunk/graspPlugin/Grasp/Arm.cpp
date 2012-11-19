@@ -112,7 +112,7 @@ bool Arm::IK_arm(const Vector3 &p, const Matrix3 &R0) {
 #else
 		//sugihara method
 		MatrixXd H(n,n);
-		H = J.transpose()*MatrixXd::Identity(n,n)*J + (errsqr*0.1 + 0.001)*MatrixXd::Identity(n,n);
+		H = J.transpose()*MatrixXd::Identity(6,6)*J + (errsqr*0.1 + 0.001)*MatrixXd::Identity(n,n);
 		MatrixXd invH = H.inverse();
 		MatrixXd invJ2 = invH*J.transpose();
 

@@ -192,11 +192,14 @@ void GraspController::readMotionFile(const char argv[]) {
 
 	double time;
 
-	while (!fin_pos.eof()) {
+	if (!fin_pos.eof()) {
 		fin_pos >> time;
-		for (int i = 1;i < nHandLink();i++)	fin_pos >> handJoint()->link(i)->q;
+		for(int i=0;i<tc->nFing();i++){
+			for(int j=0;j< tc->fingers(i)->nJoints;j++){
+				fin_pos >> tc->fingers(i)->joint(j)->q;
+			}
+		}
 	}
-
 	return;
 }
 
@@ -437,16 +440,6 @@ bool GraspController::initial(TargetObject* targetObject, ArmFingers* targetArmF
 		cout << "ERROR graspPluginSetting is not found in yaml" << endl;
 		targetArmFinger=NULL;
 		return false;
-	}
-
-
-	bodyItemGRC = new cnoid::BodyItem();
-	if( bodyItemGRC->loadModelFile(tc->dataFilePath() + "grcTemplateHrp.wrl") ){
-		bodyItemGRC->setName("GRC");
-		bodyItemRobot()->addSubItem(bodyItemGRC);	/* modified by qtconv.rb 4th rule*/
-	}
-	else{
-		bodyItemGRC = NULL;
 	}
 
 	for(int i=0;i<nFing();i++) fingers(i)->coldetLinkPair(targetObject->bodyItemObject);
@@ -904,8 +897,20 @@ void GraspController::doDisplayGRCPosition(){
 		Matrix3 gR = bodyItemGRC->body()->link(0)->R; //= palm()->R*(GRCmax.R);
 		Vector3 gP = bodyItemGRC->body()->link(0)->p; //= palm()->p+palm()->R*GRCmax_Pos_;
 
-		os << "rpy"<< rpyFromRot( Matrix3(trans(palm()->R) * gR)) << endl;
-		os << "pos"<<Vector3(trans(palm()->R)* (gP-palm()->p) )<< endl;
+		os << "rpy "<< rpyFromRot( Matrix3(trans(palm()->R) * gR)).transpose() << endl;
+		os << "pos "<<Vector3(trans(palm()->R)* (gP-palm()->p) ).transpose()<< endl;
+	}
+	else{
+		tc = PlanBase::instance();
+		bodyItemGRC = new cnoid::BodyItem();
+		if( bodyItemGRC->loadModelFile(tc->dataFilePath() + "grcTemplateHrp.wrl") ){
+			bodyItemGRC->setName("GRC");
+			bodyItemRobot()->addSubItem(bodyItemGRC);	/* modified by qtconv.rb 4th rule*/
+		}
+		else{
+			os << "cannot find grc file" << endl;
+			bodyItemGRC = NULL;
+		}
 	}
 
 }
