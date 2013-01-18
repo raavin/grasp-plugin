@@ -18,6 +18,7 @@
 #include <boost/regex.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/format.hpp>
+#include <boost/version.hpp>
 
 #include <QLibrary>	/* modified by qtconv.rb 1st rule*/
 
@@ -69,13 +70,23 @@ void GraspPluginManager::scanPluginFiles(const std::string& pathString)
             filesystem::directory_iterator end;
             for(filesystem::directory_iterator it(pluginPath); it != end; ++it){
                 const filesystem::path& filepath = *it;
-                if(!regex_match(filepath.leaf(), hiddenFileDirPattern)){
+#if (BOOST_VERSION<104600)
+                if(!regex_match(filepath.leaf(), hiddenFileDirPattern))
+#else
+                if(!regex_match(filepath.filename().string().c_str(), hiddenFileDirPattern))
+#endif
+		{
                     scanPluginFiles(filepath.string());
                 }
             }
         } else {
 
-            if(regex_match(pluginPath.leaf(), pluginNamePattern)){
+#if (BOOST_VERSION<104600)
+            if(regex_match(pluginPath.leaf(),pluginNamePattern))
+#else
+            if(regex_match(pluginPath.filename().string().c_str(),pluginNamePattern))
+#endif
+	    {
 
                 PluginMap::iterator p = pathToPluginInfoMap.find(pathString);
                 if(p == pathToPluginInfoMap.end()){
