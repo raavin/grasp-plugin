@@ -72,7 +72,7 @@ public :
 		std::vector<cnoid::Matrix3> Ro_put, Ro_tmp;
 		enum ManipStrategies { RIGHT_RIGHT, LEFT_LEFT, RIGHT_LEFT, LEFT_RIGHT, RIGHT_PUT_RIGHT, LEFT_PUT_LEFT, RIGHT_PUT_LEFT, LEFT_PUT_RIGHT};
 		enum Hand { RIGHT, LEFT };
-		enum Robots {PA10, HIRO, HRP2};
+		enum Robots {PA10, HIRO, HRP2, OTHER};
 		int graspingHand, robot;
 
 		std::ostream& os;
