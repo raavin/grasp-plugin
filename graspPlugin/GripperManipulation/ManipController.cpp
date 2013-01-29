@@ -79,6 +79,7 @@ bool ManipController::initial(TargetObject* targetObject, ArmFingers* targetArmF
 			 bodyItemRobot()->body()->name() == "PA10_VVV" ) robot=PA10;
 		else if(bodyItemRobot()->body()->name() == "HIRO"      ) robot = HIRO;
 		else if(bodyItemRobot()->body()->name() == "HRP2"      ) robot = HRP2;
+		else                                                     robot = OTHER;
 
 		firstPick = true;
 
