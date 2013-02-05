@@ -13,6 +13,7 @@
 #include <cnoid/EigenUtil>
 #include "ArmControllerRtc.h"
 #include "../Grasp/GraspController.h"
+#include "../PickAndPlacePlanner/RobotLocalFunctions.h"
 
 namespace grasp{
 
@@ -50,8 +51,8 @@ class RobotInterface {
 
 	protected :
 
-	virtual int objName2Id(std::string objname, std::string obj_data);
-	bool moveUp;
+	//virtual int objName2Id(std::string objname, std::string obj_data);
+	//bool moveUp;
 
 	private :
 		bool isSingleArm() { return PlanBase::instance()->armsList.size() == 1; }
@@ -60,7 +61,8 @@ class RobotInterface {
 		int moveSingleArm();
 		::ArmController * controllerRtc() { return ArmControllerRtc::instance()->comp_; };
 		int numJoints() { return PlanBase::instance()->arm()->arm_path->numJoints(); }
-		void convertAngles(const cnoid::VectorXd & seq, std::vector<double> & angles, double off);
+		//void writeJointSeq(char * jointlogfile, const unsigned int filelength, const std::vector<cnoid::VectorXd>& jointSeq, std::vector<double>& motionTimeSeq);
+		void convertAngles(const cnoid::VectorXd & seq, std::vector<double> & angles);
 		void checkAngles(std::vector<double> & angles);
 };
 

@@ -31,7 +31,6 @@ bool RobotInterface::runPythonCommand(string func){
 	return true;
 }
 
-
 void RobotInterface::doReadFromFile() {
 
 		char line[1024];
@@ -74,7 +73,7 @@ void RobotInterface::doReadFromFile() {
 		}
 
 
-		int error = system("cp ~/work/cap/data_cap.mat extplugin/graspPlugin/RobotInterface/data"); if(error) cout << error<< endl;
+		int error = system("cp /home/vvv/Logistics/data_cap.mat extplugin/graspPlugin/RobotInterface/data"); if(error) cout << error<< endl;
 
 		//char line[1024];
 		Matrix3 Rm;
@@ -166,7 +165,7 @@ void RobotInterface::doReadFromFile() {
 void RobotInterface::doRecoginitionAndRead() {
 
 		PlanBase* tc = PlanBase::instance();
-		string recogCommand = "/home/vvv/work/cap/recog_" + tc->targetObject->bodyItemObject->name() + ".sh";
+		string recogCommand = "/home/vvv/Logistics/recog_" + tc->targetObject->bodyItemObject->name() + ".sh";
 		int error = system(recogCommand.c_str());
 		if(error) cout << error<< endl;
 		doReadFromFile();
@@ -174,7 +173,7 @@ void RobotInterface::doRecoginitionAndRead() {
 
 void RobotInterface::doCapture() {
 
-		int error = system("/home/vvv/work/cap/capture.sh");
+		int error = system("/home/vvv/Logistics/capture.sh");
 		if(error) cout << error<< endl;
 }
 
@@ -254,7 +253,6 @@ void RobotInterface::doHome() {
 		YamlSequence * seq = poseNode.toSequence();
 		for (int i = 0; i < numJoints(); i++) {
 			YamlNode& node = seq->get(i);
-			//CORBA_SeqUtil::push_back(jp, radian(node.toDouble()));
 			CORBA_SeqUtil::push_back(jp, node.toDouble());
 		}
 		try {
@@ -269,26 +267,27 @@ void RobotInterface::doHome() {
 void RobotInterface::doMove() {
 
 		if(isSingleArm()){
-			    std::string name = PlanBase::instance()->bodyItemRobot()->body()->name();
-				if(name == "PA10_VVV"){
-					showWarningDialog("PA10_VVVには未対応です");
-					// PA10_VVVはまだ共通IFに書き直せない(2012/03/08)
-					//		int error = system("/home/Robot/freeformdemo/shells/grasp_object_excade.sh");
-					//		if (error) cout << error<< endl;
-				} else {
-					int error = moveSingleArm();
-					if (error == EXIT_FAILURE) {
-						cout << "warning: PA10Move returns " << error << endl;
-					}
-				}
+				int error = moveSingleArm();
+				if (error == EXIT_FAILURE)
+					cout << "warning: moveSingleArm returns " << error << endl;
 		}
 		else if(isDualArm()){
 			    int error = moveDualArm();
-			    if (error == EXIT_FAILURE) {
-			    	cout << "warning: HIROMove returns " << error << endl;
-			    }
+			    if (error == EXIT_FAILURE)
+			    	cout << "warning: moveDualArm returns " << error << endl;
 		}
 
+}
+
+void writeAngle(const vector<double>& angle, string f)
+{
+	string  File = "extplugin/graspPlugin/RobotInterface/" + f;
+	ofstream fout(File.c_str());
+
+	for(size_t i=0; i<angle.size()-1; i++)
+		fout << angle[i]*180/3.14 << ", ";
+
+	fout << angle.back()*180/3.14;
 }
 
 int RobotInterface::moveSingleArm()
@@ -298,8 +297,7 @@ int RobotInterface::moveSingleArm()
 	RETURN_ID * ret;
 
 	int numFingJoint = PlanBase::instance()->bodyItemRobot()->body()->numJoints()-numJoints();
-	double openAngle[numFingJoint], closeAngle[numFingJoint], tmpAngle[numFingJoint];
-	bool wro=true, wrc=true;
+	vector<double> tmpAngle(numFingJoint);
 
 	int seqSize=tc->graspMotionSeq.size();
 
@@ -342,19 +340,13 @@ int RobotInterface::moveSingleArm()
 
 		try {
 			if (tc->graspMotionSeq[n].graspingState == tc->GRASPING) {
+
+				writeAngle(tmpAngle, tc->bodyItemRobot()->body()->name()+"Provider/close.dat");
 				ret = controllerRtc()->manipulator_motion()->closeGripper();
-				if(wrc){
-					for(int i=0; i<numFingJoint; i++)
-						closeAngle[i] = tmpAngle[i];
-					wrc=false;
-				}
 			} else {
+
+				writeAngle(tmpAngle, tc->bodyItemRobot()->body()->name()+"Provider/open.dat");
 				ret = controllerRtc()->manipulator_motion()->openGripper();
-				if(wro){
-					for(int i=0; i<numFingJoint; i++)
-						openAngle[i] = tmpAngle[i];
-					wro=false;
-				}
 			}
 
 			if (ret->id != EXIT_SUCCESS) {
@@ -365,20 +357,12 @@ int RobotInterface::moveSingleArm()
 			cerr << "open/close Gripper: NO_IMPLEMENT" << endl;
 			throw;
 		}
+
 	}
 
 	try {
-		ret = controllerRtc()->manipulator_motion()->openGripper();
+		//ret = controllerRtc()->manipulator_motion()->openGripper();
 		ret = controllerRtc()->manipulator_motion()->resume();
-		string  openFile = "extplugin/graspPlugin/RobotInterface/" + tc->bodyItemRobot()->body()->name() + "Provider/open.dat";
-		string closeFile = "extplugin/graspPlugin/RobotInterface/" + tc->bodyItemRobot()->body()->name() + "Provider/close.dat";
-		ofstream fileOpen(openFile.c_str()), fileClose(closeFile.c_str());
-		for(int i=0; i<numFingJoint-1; i++){
-			fileOpen << openAngle[i]*180/3.14 << ", ";
-			fileClose << closeAngle[i]*180/3.14 << ", ";
-		}
-		fileOpen << openAngle[numFingJoint-1]*180/3.14;
-		fileClose << closeAngle[numFingJoint-1]*180/3.14;
 
 		if (ret->id != EXIT_SUCCESS) {
 			cout << "warning: open Gripper returns " << ret->id << ": " << ret->comment << endl;
@@ -394,36 +378,34 @@ int RobotInterface::moveSingleArm()
 int RobotInterface::moveDualArm()
 {
 
-		static const double offset = 10.0;
-
 		PlanBase* tc = PlanBase::instance();
 		int error = 0;
-		vector<VectorXd>& jointSeq = tc->jointSeq;
-		vector<double> & motionTimeSeq = tc->motionTimeSeq;
 		MotionCommands::DoubleSeq mtSeq;
-		int size = jointSeq.size();
+		int size = tc->graspMotionSeq.size();
 		MotionCommands::JointPosSeq jpSeq;
 		jpSeq.length(size);
 		mtSeq.length(size);
-		static const int angle_size = 23;
-		for (int i = 0; i < size; i++){
+
+		static const int angle_size = tc->graspMotionSeq[0].jointSeq.size(); //23;
+
+		for(int i=0; i < size; i++){
 			vector<double> angles(angle_size);
-			convertAngles(jointSeq[i], angles, offset);
+			convertAngles(tc->graspMotionSeq[i].jointSeq, angles);
 			try {
 				checkAngles(angles);
 			} catch (std::vector<double> angles) {
-				cout << "Wrong jointSeq! Check " << endl;
+				cout << "checkAngles failed " << endl;
 				throw angles;
 			}
 			MotionCommands::JointPos jp(angle_size + 1);
 			jp.length(angle_size + 1);
-			for (int j = 0; j < angle_size; j++) {
-				//jp[j] = radian(angles[j]);
+			for (int j = 0; j < angle_size; j++)
 				jp[j] = angles[j];
-			}
+
 			jpSeq[i] = jp;
-			mtSeq[i] = motionTimeSeq[i];
+			mtSeq[i] = tc->graspMotionSeq[i].motionTime;
 			cout << "motion time(" << i << "):" << mtSeq[i] << endl;
+
 		}
 		cout << "movePTPJointAbsSeq" << endl;
 		try {
@@ -436,6 +418,37 @@ int RobotInterface::moveDualArm()
 		return error;
 }
 
+void RobotInterface::convertAngles(const VectorXd & seq, vector<double> & angles) {
+
+	const double o = 180.0/3.14159;
+
+	const int asize = (int)angles.size();
+	for (int i = 0; i < asize; i++)
+		angles[i] = seq(i)*o;
+
+	if(PlanBase::instance()->bodyItemRobot()->body()->name() == "HIRO" ){
+		const double off = 10.0;
+		const int base[] = {15, 19};
+		const double offset[3] = {-off, 0.0, off};
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 3; j++) {
+				int k = base[i] + j;
+				angles[k] += offset[j];
+			}
+		}
+	}
+}
+
+void RobotInterface::checkAngles(vector<double> & angles) {
+	const int asize = (int)angles.size();
+	for (int i = 0; i < asize; i++) {
+		if (angles[i] > 360.0) {
+			throw angles;
+		}
+	}
+}
+
+/*
 int RobotInterface::objName2Id(string objname, string obj_data){
 
 		std::ifstream fin_obj(obj_data.c_str());
@@ -458,35 +471,9 @@ int RobotInterface::objName2Id(string objname, string obj_data){
 			li2 >> qtmp;
 			li2 >> tmp_obj;
 
-			if(tmp_obj.find(objname,0) != string::npos){
+			if(tmp_obj.find(objname,0) != string::npos)
 				return qtmp;
-			}
 		}
 		return -1;
 }
-
-void RobotInterface::convertAngles(const VectorXd & seq, vector<double> & angles, double off) {
-	const double o = 180.0/3.14159;
-
-	const int asize = (int)angles.size();
-	for (int i = 0; i < asize; i++)
-		angles[i] = seq(i)*o;
-
-	const int base[] = {15, 19};
-	const double offset[3] = {-off, 0.0, off};
-	for (int i = 0; i < 2; i++) {
-		for (int j = 0; j < 3; j++) {
-			int k = base[i] + j;
-			angles[k] += offset[j];
-		}
-	}
-}
-
-void RobotInterface::checkAngles(vector<double> & angles) {
-	const int asize = (int)angles.size();
-	for (int i = 0; i < asize; i++) {
-		if (angles[i] > 360.0) {
-			throw angles;
-		}
-	}
-}
+*/
