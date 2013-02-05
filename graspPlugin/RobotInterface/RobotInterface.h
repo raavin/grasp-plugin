@@ -13,7 +13,6 @@
 #include <cnoid/EigenUtil>
 #include "ArmControllerRtc.h"
 #include "../Grasp/GraspController.h"
-#include "../PickAndPlacePlanner/RobotLocalFunctions.h"
 
 namespace grasp{
 

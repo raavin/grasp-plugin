@@ -397,8 +397,8 @@ int RobotInterface::moveDualArm()
 				cout << "checkAngles failed " << endl;
 				throw angles;
 			}
-			MotionCommands::JointPos jp(angle_size + 1);
-			jp.length(angle_size + 1);
+			MotionCommands::JointPos jp(angle_size);
+			jp.length(angle_size);
 			for (int j = 0; j < angle_size; j++)
 				jp[j] = angles[j];
 
