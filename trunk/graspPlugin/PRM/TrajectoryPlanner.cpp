@@ -12,7 +12,9 @@
 #include <cnoid/TimeBar>	/* modified by qtconv.rb 0th rule*/
 #include <cnoid/ItemTreeView>	/* modified by qtconv.rb 0th rule*/
 
+#ifndef WIN32
 #include <dirent.h>
+#endif
 
 #include "PlanInterface.h"
 
@@ -226,10 +228,10 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		gc->setGraspingState2(PlanBase::NOT_GRASPING);
 		MotionState tempState = gc->getMotionState();
 		gc->initialCollision();
-	
+
 		vector<MotionState> inputMotionSeq;
 		bool outputGraspMotionSeq = true;
-	
+
 		if(gc->jointSeq.size()>1){
 			for(unsigned int i=0; i<gc->jointSeq.size(); i++){
 				gc->setGraspingState(gc->graspingStateSeq[i]);
@@ -247,7 +249,7 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 		else {
 			outputGraspMotionSeq = false;
 			//gc->graspMotionSeq.clear();
-			MotionState startMotionState, endMotionState; 
+			MotionState startMotionState, endMotionState;
 
 			if(gc->startMotionState.id > 0){
 				startMotionState = gc->startMotionState;
@@ -266,7 +268,7 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 				temp.id = 2;
 				endMotionState = temp;
 			}
-			
+
 			if( (startMotionState.pos - endMotionState.pos).norm() > 1.e-10){
 				gc->setTrajectoryPlanMapDOF();
 			}else{
@@ -356,10 +358,10 @@ bool TrajectoryPlanner::doTrajectoryPlanning() {
 					gc->setInterLink();
 					MotionState temp = gc->getMotionState();
 					motionSeq.push_back( temp );
-					
+
 					if(outputGraspMotionSeq){
 						if( l < gc->motionTimeSeq.size()  )  temp.motionTime = gc->motionTimeSeq[l];
-						if(j<config_tmp.size()-1 || i==gc->jointSeq.size()-2){
+						if(j<config_tmp.size()-1 || i==inputMotionSeq.size()-2){
 							gc->graspMotionSeq.push_back(temp);
 						}
 					}
