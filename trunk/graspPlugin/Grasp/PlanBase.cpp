@@ -403,6 +403,39 @@ bool PlanBase::SetGraspingRobot(cnoid::BodyItemPtr bodyItem_){
 	setGraspingState(NOT_GRASPING);
 	setGraspingState2(NOT_GRASPING);
 
+	robotSelfPairs.clear();
+/*	for(unsigned int i=0; i<arm()->arm_path->numJoints(); i++){
+		for(unsigned int j=i+2; j<arm()->arm_path->numJoints(); j++){
+			robotSelfPairs.push_back(new ColdetLinkPair(arm()->arm_path->joint(i), arm()->arm_path->joint(j)) );
+		}
+	}
+
+*/
+	for(unsigned int i=0;i<bodyItemRobot()->body()->numLinks();i++){ // If initial position is not collided, it is stored as
+		for(unsigned int j=i+1;j<bodyItemRobot()->body()->numLinks();j++){
+			bool pass = false;
+			pair<multimap<string, string>::iterator, multimap<string, string>::iterator> ppp;
+			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(i)->name() );
+			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
+				if(it2->second == bodyItemRobot()->body()->link(j)->name()) pass = true;
+			}
+			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(j)->name() );
+			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
+				if(it2->second == bodyItemRobot()->body()->link(i)->name()) pass = true;
+			}
+			if(pass) continue;
+			ColdetLinkPairUpdateCheckPtr temp= new ColdetLinkPairUpdateCheck(bodyItemRobot()->body()->link(i),bodyItemRobot()->body()->link(j));
+			temp->updatePositions();
+			int t1,t2;
+			double p1[3],p2[3];
+			double distance = temp->computeDistance(t1,p1,t2,p2);
+			if(distance>1.0e-04)	robotSelfPairs.push_back(temp);
+#ifdef DEBUG_MODE
+			else os <<"collide on initial condition at robotSelfPair"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl;
+#endif
+		}
+	}
+	
 	return true;
 }
 
@@ -917,44 +950,12 @@ bool PlanBase::initial() {
 
 void PlanBase::initialCollision(){
 
-	robotSelfPairs.clear();
 	robotEnvPairs.clear();
 	robotObjPairs.clear();
 	objEnvPairs.clear();
 
 	if(targetArmFinger==NULL) {
 		return;
-	}
-/*	for(unsigned int i=0; i<arm()->arm_path->numJoints(); i++){
-		for(unsigned int j=i+2; j<arm()->arm_path->numJoints(); j++){
-			robotSelfPairs.push_back(new ColdetLinkPair(arm()->arm_path->joint(i), arm()->arm_path->joint(j)) );
-		}
-	}
-
-*/
-	for(unsigned int i=0;i<bodyItemRobot()->body()->numLinks();i++){ // If initial position is not collided, it is stored as
-		for(unsigned int j=i+1;j<bodyItemRobot()->body()->numLinks();j++){
-			bool pass = false;
-			pair<multimap<string, string>::iterator, multimap<string, string>::iterator> ppp;
-			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(i)->name() );
-			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
-				if(it2->second == bodyItemRobot()->body()->link(j)->name()) pass = true;
-			}
-			ppp = targetArmFinger->contactLinks.equal_range(bodyItemRobot()->body()->link(j)->name() );
-			for (multimap<string, string>::iterator it2 = ppp.first; it2 != ppp.second; ++it2){
-				if(it2->second == bodyItemRobot()->body()->link(i)->name()) pass = true;
-			}
-			if(pass) continue;
-			ColdetLinkPairUpdateCheckPtr temp= new ColdetLinkPairUpdateCheck(bodyItemRobot()->body()->link(i),bodyItemRobot()->body()->link(j));
-			temp->updatePositions();
-			int t1,t2;
-			double p1[3],p2[3];
-			double distance = temp->computeDistance(t1,p1,t2,p2);
-			if(distance>1.0e-04)	robotSelfPairs.push_back(temp);
-#ifdef DEBUG_MODE
-			else os <<"collide on initial condition at robotSelfPair"  <<distance <<" "<< temp->model(0)->name() <<" " << temp->model(1)->name()  << endl;
-#endif
-		}
 	}
 	for(unsigned int j=0;j<bodyItemRobot()->body()->numLinks();j++){
 		for( list<BodyItemPtr>::iterator it = bodyItemEnv.begin(); it !=bodyItemEnv.end(); it++){
