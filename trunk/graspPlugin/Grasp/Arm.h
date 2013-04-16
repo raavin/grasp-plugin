@@ -52,6 +52,8 @@ class Arm{
 		bool palmContact;
 		cnoid::Vector3 closeDir;
 		cnoid::Vector3 approachOffset;
+		
+		bool searchBasePositionMode;
 };
 
 }
